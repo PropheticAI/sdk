@@ -1,6 +1,6 @@
 # Prophet SDK
 
-Python SDK for the Prophet Go-Search API.
+Python SDK for Prophet's API.
 
 ## Installation
 
