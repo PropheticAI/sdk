@@ -14,6 +14,14 @@ Or install from source:
 pip install -e .
 ```
 
+## Authentication
+
+To use the Prophet SDK, you need API credentials. Create an account at:
+
+https://auth.app.prophet.io/knock-knock
+
+After signing up, you'll receive a `client_id` and `client_secret` for API access.
+
 ## Quick Start
 
 ```python
@@ -21,7 +29,7 @@ from prophet.sdk import Prophet, Q, HoursAgo, Now
 
 # Initialize client
 prophet = Prophet(
-    base_url="https://api.prophet.io",
+    base_url="https://app.prophet.io",
     client_id="your_client_id",
     client_secret="your_client_secret"
 )
