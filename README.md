@@ -18,7 +18,7 @@ pip install -e .
 
 To use the Prophet SDK, you need API credentials. Create an account at:
 
-https://auth.app.prophet.io/knock-knock
+https://prophetic.ai/
 
 After signing up, you'll receive a `client_id` and `client_secret` for API access.
 
