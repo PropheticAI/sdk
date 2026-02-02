@@ -122,16 +122,31 @@ while True:
 Access flow data with dot notation:
 
 ```python
+# Endpoint access (both styles work)
 flow.src.ip          # "192.168.1.100"
+flow.src_ip          # "192.168.1.100" (shortcut)
 flow.src.port        # 54321
 flow.dst.ip          # "10.90.8.53"
 flow.dst.port        # 53
+
+# Transport and protocol
 flow.transport.proto # "UDP"
-flow.bytes           # 512
-flow.packets         # 1
+flow.protocol        # "UDP" (shortcut)
+
+# Metrics
+flow.bytes           # 512 (from metric.total_bytes or stats)
+flow.packets         # 6
+
+# Metadata
 flow.app_name        # "DNS"
-flow.timestamp       # datetime object
-flow.raw             # Original dict
+flow.instance_id     # "your-instance-id"
+flow.timestamp       # 1706000000000 (Unix ms)
+flow.timestamp_dt    # datetime object
+
+# Deep access to stats
+flow.stats.rate.bps.total      # bits per second
+flow.stats.volume.bytes.total  # total bytes
+flow.meta.tags                 # ["tag1", "tag2"]
 ```
 
 ## Context Manager
