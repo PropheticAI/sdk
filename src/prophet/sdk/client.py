@@ -3,18 +3,13 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import TYPE_CHECKING
 
 import requests
 
 from .auth import TokenManager
+from .deployments import DeploymentsAPI
 from .exceptions import APIError, ConnectionError
-from .flows import FlowIterator
-from .models import Sort, TimeFilter
-from .query import Q
-
-if TYPE_CHECKING:
-    pass
+from .flows import FlowsAPI
 
 
 @dataclass
@@ -29,7 +24,11 @@ class HealthStatus:
 
 class Prophet:
     """
-    Python client for the Prophet Go-Search API.
+    Python client for the Prophet API.
+
+    Provides access to:
+    - `prophet.flows` - Query flow records
+    - `prophet.deployments` - Manage sub-deployments
 
     Example:
         from prophet.sdk import Prophet, Q, HoursAgo, Now
@@ -40,6 +39,7 @@ class Prophet:
             client_secret="my_secret"
         )
 
+        # Query flows
         for flow in prophet.flows(
             instances=["instance-1"],
             query=Q("dst.port").eq(443),
@@ -47,6 +47,11 @@ class Prophet:
             end=Now(),
         ):
             print(f"{flow.src.ip} -> {flow.dst.ip}")
+
+        # List deployments
+        response = prophet.deployments.list(parent_id="parent-123")
+        for d in response.deployments:
+            print(d.name)
     """
 
     def __init__(
@@ -61,7 +66,7 @@ class Prophet:
         Initialize the Prophet client.
 
         Args:
-            base_url: Base URL of the Go-Search API
+            base_url: Base URL of the Prophet API
             client_id: OAuth2 client ID
             client_secret: OAuth2 client secret
             timeout: Request timeout in seconds (default: 30)
@@ -78,45 +83,49 @@ class Prophet:
             refresh_threshold=refresh_threshold,
         )
 
-    def flows(
-        self,
-        instances: list[str],
-        query: str | Q = "",
-        start: TimeFilter | None = None,
-        end: TimeFilter | None = None,
-        sort: list[Sort] | None = None,
-        fields: list[str] | None = None,
-        size: int = 100,
-    ) -> FlowIterator:
-        """
-        Query flow records with automatic pagination.
+        # Initialize API namespaces
+        self._flows = FlowsAPI(self)
+        self._deployments = DeploymentsAPI(self)
 
-        Args:
-            instances: List of instance IDs to search
-            query: PQL query string or Q builder (empty = match all)
-            start: Start time filter (default: None)
-            end: End time filter (default: None)
-            sort: List of Sort specifications
-            fields: Fields to include in response (None = all)
-            size: Page size (default: 100, max: 25000)
+    @property
+    def flows(self) -> FlowsAPI:
+        """
+        Access the Flows API for querying flow records.
 
         Returns:
-            FlowIterator for iterating over results
+            FlowsAPI instance
 
         Example:
-            for flow in prophet.flows(["inst-1"], Q.field("dst.port").eq(443)):
+            # Using .query() method
+            for flow in prophet.flows.query(["inst-1"], Q("dst.port").eq(443)):
+                print(flow.src.ip)
+
+            # Or call directly (backward compatible)
+            for flow in prophet.flows(["inst-1"], Q("dst.port").eq(443)):
                 print(flow.src.ip)
         """
-        return FlowIterator(
-            client=self,
-            instances=instances,
-            query=query,
-            start=start,
-            end=end,
-            sort=sort,
-            fields=fields,
-            size=size,
-        )
+        return self._flows
+
+    @property
+    def deployments(self) -> DeploymentsAPI:
+        """
+        Access the Deployments API for managing sub-deployments.
+
+        Returns:
+            DeploymentsAPI instance
+
+        Example:
+            # List sub-deployments
+            response = prophet.deployments.list(parent_id="parent-123")
+
+            # Create a sub-deployment
+            result = prophet.deployments.create(
+                name="Sub Tenant",
+                handle="sub_tenant",
+                parent_id="parent-123",
+            )
+        """
+        return self._deployments
 
     def health(self) -> HealthStatus:
         """

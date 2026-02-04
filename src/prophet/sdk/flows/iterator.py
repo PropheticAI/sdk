@@ -1,15 +1,16 @@
-"""Flow iterator and pagination handling."""
+"""Flow iterator for pagination handling."""
 
 from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any, Iterator
 
-from .exceptions import APIError, AuthenticationError
-from .models import Flow, FlowPage, Sort, TimeFilter
-from .query import Q
+from ..exceptions import APIError, AuthenticationError
+from .models import Flow, FlowPage
 
 if TYPE_CHECKING:
-    from .client import Prophet
+    from ..client import Prophet
+    from ..models import Sort, TimeFilter
+    from ..query import Q
 
 
 class FlowIterator:
@@ -37,7 +38,7 @@ class FlowIterator:
     ) -> None:
         self._client = client
         self._instances = instances
-        self._query = query.build() if isinstance(query, Q) else query
+        self._query = query.build() if hasattr(query, 'build') else query
         self._start = start
         self._end = end
         self._sort = sort
@@ -186,7 +187,6 @@ class FlowIterator:
         data = response.json()
 
         # Get the first instance's results
-        # (we query one instance at a time for the iterator)
         instance_id = self._instances[0]
         instance_data = data.get(instance_id, {})
 

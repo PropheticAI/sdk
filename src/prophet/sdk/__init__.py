@@ -1,5 +1,5 @@
 """
-Prophet SDK - Python client for the Prophet Go-Search API.
+Prophet SDK - Python client for the Prophet API.
 
 Example:
     from prophet.sdk import Prophet, Q, HoursAgo, Now
@@ -10,6 +10,7 @@ Example:
         client_secret="my_secret"
     )
 
+    # Query flows
     for flow in prophet.flows(
         instances=["instance-1"],
         query=Q("dst.port").eq(443),
@@ -17,6 +18,11 @@ Example:
         end=Now(),
     ):
         print(f"{flow.src_ip}:{flow.src_port} -> {flow.dst_ip}:{flow.dst_port}")
+
+    # Manage deployments
+    response = prophet.deployments.list(parent_id="parent-123")
+    for deployment in response.deployments:
+        print(deployment.name)
 """
 
 from .client import HealthStatus, Prophet
@@ -31,19 +37,22 @@ from .exceptions import (
     TokenExpiredError,
     ValidationError,
 )
-from .flows import FlowIterator
 from .models import (
-    # Time filters
     At,
     DaysAgo,
     HoursAgo,
     MinutesAgo,
     Now,
+    Sort,
     TimeFilter,
     WeeksAgo,
-    # Sort
-    Sort,
-    # Flow models
+)
+from .query import Q
+
+# Flow submodule exports
+from .flows import (
+    FlowIterator,
+    FlowsAPI,
     Flow,
     FlowPage,
     DirectionFields,
@@ -54,13 +63,21 @@ from .models import (
     SessionMetrics,
     SimpleMetrics,
     GeoEntry,
-    # Supporting models
     VolumeMetrics,
     RateMetrics,
     QualityMetrics,
     TimingMetrics,
 )
-from .query import Q
+
+# Deployment submodule exports
+from .deployments import (
+    DeploymentsAPI,
+    Deployment,
+    DeploymentListResponse,
+    DeploymentCreateResponse,
+    DeploymentDeleteResponse,
+    ParentInfo,
+)
 
 __version__ = "0.1.0"
 
@@ -80,7 +97,8 @@ __all__ = [
     "At",
     # Sort
     "Sort",
-    # Flow models
+    # Flow API
+    "FlowsAPI",
     "Flow",
     "FlowPage",
     "FlowIterator",
@@ -96,6 +114,13 @@ __all__ = [
     "RateMetrics",
     "QualityMetrics",
     "TimingMetrics",
+    # Deployment API
+    "DeploymentsAPI",
+    "Deployment",
+    "DeploymentListResponse",
+    "DeploymentCreateResponse",
+    "DeploymentDeleteResponse",
+    "ParentInfo",
     # Exceptions
     "ProphetError",
     "ConfigurationError",

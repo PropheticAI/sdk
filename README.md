@@ -149,6 +149,105 @@ flow.stats.volume.bytes.total  # total bytes
 flow.meta.tags                 # ["tag1", "tag2"]
 ```
 
+## Deployments API
+
+Manage sub-deployments (child tenants) for MSP parent accounts.
+
+### List Sub-Deployments
+
+```python
+# List your own sub-deployments (if you're a parent MSP)
+response = prophet.deployments.list()
+
+# Or specify a different parent (requires god_mode access)
+response = prophet.deployments.list(parent_id="parent-123")
+
+# Access the response
+print(f"Parent: {response.parent.name}")
+print(f"Found {response.count} sub-deployments")
+
+for deployment in response.deployments:
+    print(f"  - {deployment.name} ({deployment.customer_id})")
+    print(f"    Handle: {deployment.handle}")
+    print(f"    Created: {deployment.created_at}")
+```
+
+### Create a Sub-Deployment
+
+```python
+result = prophet.deployments.create(
+    name="ACME Corp",
+    handle="acme_corp",
+    parent_id="parent-123",  # Optional if you're the parent
+    subdomain="acme",        # Optional custom subdomain
+)
+
+# Access the created deployment info
+customer = result.deployment.customer
+print(f"Created: {customer.customer_id}")
+print(f"Name: {customer.name}")
+print(f"Handle: {customer.handle}")
+print(f"Org Code: {customer.org_code}")
+```
+
+### Delete a Sub-Deployment
+
+```python
+result = prophet.deployments.delete(
+    customer_id="sub-deployment-123",
+    parent_id="parent-123",
+)
+
+print(f"Deleted: {result.deleted.name} ({result.deleted.customer_id})")
+print(result.message)
+```
+
+### Get a Specific Deployment
+
+```python
+# Convenience method to find a specific sub-deployment
+deployment = prophet.deployments.get("sub-deployment-123")
+
+if deployment:
+    print(f"Found: {deployment.name}")
+else:
+    print("Deployment not found")
+```
+
+### Deployment Object
+
+```python
+deployment.customer_id  # "acme-a1234b567"
+deployment.name         # "ACME Corp"
+deployment.handle       # "acme_corp"
+deployment.type         # "child"
+deployment.parent       # "parent-123"
+deployment.subdomain    # "acme"
+deployment.created_at   # "2025-02-04T16:00:00Z"
+```
+
+### Response Objects
+
+```python
+# DeploymentListResponse
+response.parent       # ParentInfo object
+response.deployments  # List[Deployment]
+response.count        # Number of deployments
+
+# ParentInfo
+response.parent.customer_id  # "parent-123"
+response.parent.name         # "Parent MSP"
+response.parent.handle       # "parent_msp"
+
+# DeploymentCreateResponse
+result.deployment.customer   # CreatedDeploymentCustomer
+result.deployment.org        # DeploymentOrg (Kinde org info)
+
+# DeploymentDeleteResponse
+result.message  # "Sub-deployment xyz deleted successfully"
+result.deleted  # DeletedDeployment object
+```
+
 ## Context Manager
 
 ```python
