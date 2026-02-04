@@ -34,7 +34,7 @@ class Deployment(DeploymentModel):
     type: str | None = None
     parent: str | None = None
     subdomain: str | None = None
-    deployment: str | None = None
+    deployment: dict[str, Any] | None = None  # e.g. {'status': 'deployed'}
     created_at: str | None = None
 
     def __repr__(self) -> str:
@@ -59,7 +59,7 @@ class CreatedDeploymentCustomer(DeploymentModel):
     parent: str | None = None
     subdomain: str | None = None
     org_code: str | None = None
-    deployment: str | None = None
+    deployment: dict[str, Any] | None = None  # e.g. {'status': 'deployed'}
     created_at: str | None = None
 
 

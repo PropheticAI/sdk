@@ -71,15 +71,29 @@ class DeploymentsAPI:
             for d in response.deployments:
                 print(f"  - {d.name} ({d.customer_id})")
         """
-        payload = {}
+        params = {}
         if parent_id:
-            payload["parent_id"] = parent_id
+            params["parent_id"] = parent_id
 
-        response = self._client._request("GET", "/deployments/1.0", json=payload)
+        response = self._client._request("GET", "/rest/deployments/1.0", params=params)
 
         self._handle_errors(response)
 
-        data = response.json()
+        # Debug: handle empty responses
+        if not response.text:
+            raise APIError(
+                f"Empty response from API (status={response.status_code})",
+                status_code=response.status_code,
+            )
+
+        try:
+            data = response.json()
+        except Exception as e:
+            raise APIError(
+                f"Invalid JSON response: {response.text[:500]}",
+                status_code=response.status_code,
+            )
+
         return DeploymentListResponse.from_response(data)
 
     def create(
@@ -87,7 +101,6 @@ class DeploymentsAPI:
         name: str,
         handle: str,
         parent_id: str,
-        subdomain: str | None = None,
     ) -> DeploymentCreateResponse:
         """
         Create a new sub-deployment under a parent MSP.
@@ -96,7 +109,6 @@ class DeploymentsAPI:
             name: Display name for the sub-deployment
             handle: URL-safe identifier (will be slugified)
             parent_id: The customer_id of the parent MSP
-            subdomain: Optional custom subdomain for the deployment
 
         Returns:
             DeploymentCreateResponse with the created deployment info
@@ -111,7 +123,6 @@ class DeploymentsAPI:
                 name="ACME Corp",
                 handle="acme_corp",
                 parent_id="parent-123",
-                subdomain="acme",
             )
             print(f"Created: {result.deployment.customer.customer_id}")
         """
@@ -128,10 +139,7 @@ class DeploymentsAPI:
             "parent_id": parent_id,
         }
 
-        if subdomain:
-            payload["subdomain"] = subdomain
-
-        response = self._client._request("POST", "/deployments/1.0", json=payload)
+        response = self._client._request("POST", "/rest/deployments/1.0", json=payload)
 
         self._handle_errors(response)
 
@@ -175,7 +183,7 @@ class DeploymentsAPI:
             "parent_id": parent_id,
         }
 
-        response = self._client._request("DELETE", "/deployments/1.0", json=payload)
+        response = self._client._request("DELETE", "/rest/deployments/1.0", json=payload)
 
         self._handle_errors(response)
 
