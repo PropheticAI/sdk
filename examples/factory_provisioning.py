@@ -209,10 +209,11 @@ def main() -> int:
     parser.add_argument("--wait", action="store_true", help="poll for enrollment after provisioning")
     args = parser.parse_args()
 
+    # base_url defaults to production; set PROPHET_BASE_URL to target another env.
     prophet = Prophet(
-        base_url=os.environ.get("PROPHET_BASE_URL", "https://app.prophet.io"),
         client_id=_env("PROPHET_CLIENT_ID"),
         client_secret=_env("PROPHET_CLIENT_SECRET"),
+        base_url=os.environ.get("PROPHET_BASE_URL", Prophet.DEFAULT_BASE_URL),
     )
 
     if args.setup:

@@ -4,10 +4,10 @@ Prophet SDK - Python client for the Prophet API.
 Example:
     from prophet.sdk import Prophet, Q, HoursAgo, Now
 
+    # base_url defaults to production (https://app.prophet.io)
     prophet = Prophet(
-        base_url="https://app.prophet.io",
         client_id="my_client",
-        client_secret="my_secret"
+        client_secret="my_secret",
     )
 
     # Query flows

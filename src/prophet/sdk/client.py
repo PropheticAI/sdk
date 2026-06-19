@@ -35,10 +35,11 @@ class Prophet:
     Example:
         from prophet.sdk import Prophet, Q, HoursAgo, Now
 
+        # base_url defaults to production (https://app.prophet.io);
+        # pass base_url="https://dev.prophet.io" to target dev.
         prophet = Prophet(
-            base_url="https://app.prophet.io",
             client_id="my_client",
-            client_secret="my_secret"
+            client_secret="my_secret",
         )
 
         # Query flows
@@ -56,9 +57,12 @@ class Prophet:
             print(d.name)
     """
 
+    DEFAULT_BASE_URL = "https://app.prophet.io"
+
     def __init__(
         self,
-        base_url: str,
+        base_url: str = DEFAULT_BASE_URL,
+        *,
         client_id: str,
         client_secret: str,
         timeout: float = 30.0,
@@ -68,7 +72,7 @@ class Prophet:
         Initialize the Prophet client.
 
         Args:
-            base_url: Base URL of the Prophet API
+            base_url: Base URL of the Prophet API (default: production, https://app.prophet.io)
             client_id: OAuth2 client ID
             client_secret: OAuth2 client secret
             timeout: Request timeout in seconds (default: 30)

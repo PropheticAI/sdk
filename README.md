@@ -27,11 +27,10 @@ After signing up, you'll receive a `client_id` and `client_secret` for API acces
 ```python
 from prophet.sdk import Prophet, Q, HoursAgo, Now
 
-# Initialize client
+# Initialize client (base_url defaults to production, https://app.prophet.io)
 prophet = Prophet(
-    base_url="https://app.prophet.io",
     client_id="your_client_id",
-    client_secret="your_client_secret"
+    client_secret="your_client_secret",
 )
 
 # Iterate over flows - pagination is automatic
