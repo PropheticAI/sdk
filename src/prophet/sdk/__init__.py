@@ -5,7 +5,7 @@ Example:
     from prophet.sdk import Prophet, Q, HoursAgo, Now
 
     prophet = Prophet(
-        base_url="https://api.prophet.io",
+        base_url="https://app.prophet.io",
         client_id="my_client",
         client_secret="my_secret"
     )

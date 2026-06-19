@@ -178,8 +178,7 @@ for deployment in response.deployments:
 result = prophet.deployments.create(
     name="ACME Corp",
     handle="acme_corp",
-    parent_id="parent-123",  # Optional if you're the parent
-    subdomain="acme",        # Optional custom subdomain
+    parent_id="parent-123",
 )
 
 # Access the created deployment info
