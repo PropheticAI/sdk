@@ -10,6 +10,8 @@ from .auth import TokenManager
 from .deployments import DeploymentsAPI
 from .exceptions import APIError, ConnectionError
 from .flows import FlowsAPI
+from .nodes import NodesAPI
+from .profiles import ProfilesAPI
 
 
 @dataclass
@@ -86,6 +88,8 @@ class Prophet:
         # Initialize API namespaces
         self._flows = FlowsAPI(self)
         self._deployments = DeploymentsAPI(self)
+        self._nodes = NodesAPI(self)
+        self._profiles = ProfilesAPI(self)
 
     @property
     def flows(self) -> FlowsAPI:
@@ -126,6 +130,37 @@ class Prophet:
             )
         """
         return self._deployments
+
+    @property
+    def nodes(self) -> NodesAPI:
+        """
+        Access the Nodes API for provisioning units and inspecting nodes.
+
+        Returns:
+            NodesAPI instance
+
+        Example:
+            unit = prophet.nodes.provision(
+                deployment="child-customer-id",
+                cpu_id="0x1122334455667788",
+                profile_id="<profile-uuid>",
+            )
+            yaml_blob = unit.collector_yaml(spool_dir="/data/apps/prophet/spool")
+        """
+        return self._nodes
+
+    @property
+    def profiles(self) -> ProfilesAPI:
+        """
+        Access the Profiles API for managing capture-config templates.
+
+        Returns:
+            ProfilesAPI instance
+
+        Example:
+            profile = prophet.profiles.create(name="Fleet A")
+        """
+        return self._profiles
 
     def health(self) -> HealthStatus:
         """

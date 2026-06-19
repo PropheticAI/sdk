@@ -85,7 +85,7 @@ class TokenManager:
 
     def _fetch_token(self) -> None:
         """Fetch a new token from the OAuth2 endpoint."""
-        url = f"{self._base_url}/oauth2/token/1.0"
+        url = f"{self._base_url}/rest/oauth2/token/1.0"
         payload = {
             "client_id": self._client_id,
             "client_secret": self._client_secret,

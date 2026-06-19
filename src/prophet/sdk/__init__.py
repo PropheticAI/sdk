@@ -79,6 +79,23 @@ from .deployments import (
     ParentInfo,
 )
 
+# Nodes submodule exports
+from .nodes import (
+    NodesAPI,
+    Node,
+    NodeConnection,
+    NodeHealth,
+    ProvisionedUnit,
+    derive_machine_id,
+)
+
+# Profiles submodule exports
+from .profiles import (
+    ProfilesAPI,
+    Profile,
+    lightweight_packet_services,
+)
+
 __version__ = "0.1.0"
 
 __all__ = [
@@ -121,6 +138,17 @@ __all__ = [
     "DeploymentCreateResponse",
     "DeploymentDeleteResponse",
     "ParentInfo",
+    # Nodes API
+    "NodesAPI",
+    "Node",
+    "NodeConnection",
+    "NodeHealth",
+    "ProvisionedUnit",
+    "derive_machine_id",
+    # Profiles API
+    "ProfilesAPI",
+    "Profile",
+    "lightweight_packet_services",
     # Exceptions
     "ProphetError",
     "ConfigurationError",
