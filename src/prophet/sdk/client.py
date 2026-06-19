@@ -2,8 +2,11 @@
 
 from __future__ import annotations
 
+import base64
+import json
 import logging
 from dataclasses import dataclass
+from typing import Any
 
 import requests
 from requests.adapters import HTTPAdapter
@@ -11,12 +14,25 @@ from urllib3.util.retry import Retry
 
 from .auth import TokenManager
 from .deployments import DeploymentsAPI
-from .exceptions import APIError, ConnectionError
+from .exceptions import APIError, AuthenticationError, ConnectionError
 from .flows import FlowsAPI
 from .nodes import NodesAPI
 from .profiles import ProfilesAPI
 
 logger = logging.getLogger("prophet.sdk")
+
+
+def _jwt_aud(token: str) -> str:
+    """Decode the `aud` claim from a JWT payload without verifying the signature."""
+    try:
+        payload = token.split(".")[1]
+        payload += "=" * (-len(payload) % 4)
+        aud = json.loads(base64.urlsafe_b64decode(payload)).get("aud")
+    except Exception as e:
+        raise AuthenticationError("could not decode token payload") from e
+    if not isinstance(aud, str) or not aud:
+        raise AuthenticationError("token has no 'aud' (customer_id) claim")
+    return aud
 
 
 @dataclass
@@ -51,7 +67,7 @@ class Prophet:
 
         # Query flows
         for flow in prophet.flows(
-            instances=["instance-1"],
+            instance="instance-1",
             query=Q("dst.port").eq(443),
             start=HoursAgo(24),
             end=Now(),
@@ -130,11 +146,11 @@ class Prophet:
 
         Example:
             # Using .query() method
-            for flow in prophet.flows.query(["inst-1"], Q("dst.port").eq(443)):
+            for flow in prophet.flows.query("inst-1", Q("dst.port").eq(443)):
                 print(flow.src.ip)
 
-            # Or call directly (backward compatible)
-            for flow in prophet.flows(["inst-1"], Q("dst.port").eq(443)):
+            # Or call directly
+            for flow in prophet.flows("inst-1", Q("dst.port").eq(443)):
                 print(flow.src.ip)
         """
         return self._flows
@@ -148,15 +164,12 @@ class Prophet:
             DeploymentsAPI instance
 
         Example:
-            # List sub-deployments
-            response = prophet.deployments.list(parent_id="parent-123")
+            # List sub-deployments (parent_id defaults to prophet.customer_id)
+            for d in prophet.deployments.list():
+                print(d.name, d.customer_id)
 
             # Create a sub-deployment
-            result = prophet.deployments.create(
-                name="Sub Tenant",
-                handle="sub_tenant",
-                parent_id="parent-123",
-            )
+            child = prophet.deployments.create(name="Sub Tenant", handle="sub_tenant")
         """
         return self._deployments
 
@@ -190,6 +203,16 @@ class Prophet:
             profile = prophet.profiles.create(name="Fleet A")
         """
         return self._profiles
+
+    @property
+    def customer_id(self) -> str:
+        """
+        The authenticated tenant's customer_id (the JWT `aud` claim).
+
+        For a parent MSP this is the value you pass as `parent_id` when managing
+        sub-deployments. Triggers a token fetch on first access.
+        """
+        return _jwt_aud(self._auth.get_token())
 
     def health(self) -> HealthStatus:
         """
@@ -228,7 +251,7 @@ class Prophet:
         self,
         method: str,
         path: str,
-        **kwargs,
+        **kwargs: Any,
     ) -> requests.Response:
         """
         Make an authenticated request to the API.
@@ -268,5 +291,5 @@ class Prophet:
     def __enter__(self) -> Prophet:
         return self
 
-    def __exit__(self, exc_type, exc_val, exc_tb) -> None:
+    def __exit__(self, exc_type: Any, exc_val: Any, exc_tb: Any) -> None:
         self.close()

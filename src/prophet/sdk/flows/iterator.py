@@ -29,7 +29,7 @@ class FlowIterator:
     def __init__(
         self,
         client: Prophet,
-        instances: list[str],
+        instance: str,
         query: str | Q,
         start: TimeFilter | None,
         end: TimeFilter | None,
@@ -38,7 +38,7 @@ class FlowIterator:
         size: int,
     ) -> None:
         self._client = client
-        self._instances = instances
+        self._instance = instance
         self._query = query.build() if hasattr(query, 'build') else query
         self._start = start
         self._end = end
@@ -141,7 +141,7 @@ class FlowIterator:
         """Make API request for a specific page."""
         # Build request payload
         payload: dict[str, Any] = {
-            "instance_ids": self._instances,
+            "instance_ids": [self._instance],
             "module": "flows",
             "size": self._size,
             "page": page,
@@ -190,12 +190,8 @@ class FlowIterator:
             )
 
         data = response.json()
-
-        # Get the first instance's results
-        instance_id = self._instances[0]
-        instance_data = data.get(instance_id, {})
-
-        return FlowPage.from_response(instance_data, instance_id)
+        instance_data = data.get(self._instance, {})
+        return FlowPage.from_response(instance_data, self._instance)
 
     @property
     def total_found(self) -> int | None:

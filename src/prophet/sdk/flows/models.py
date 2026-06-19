@@ -523,12 +523,12 @@ class Flow(FlowModel):
     @property
     def src_ip(self) -> str:
         """Shortcut to source IP."""
-        return self.src.ip if self.src else ""
+        return self.src.ip if self.src and self.src.ip else ""
 
     @property
     def dst_ip(self) -> str:
         """Shortcut to destination IP."""
-        return self.dst.ip if self.dst else ""
+        return self.dst.ip if self.dst and self.dst.ip else ""
 
     @property
     def src_port(self) -> int:
@@ -543,12 +543,12 @@ class Flow(FlowModel):
     @property
     def protocol(self) -> str:
         """Get transport protocol."""
-        return self.transport.proto if self.transport else ""
+        return self.transport.proto if self.transport and self.transport.proto else ""
 
     @property
     def instance_id(self) -> str:
         """Get instance/customer ID."""
-        return self.meta.customer_id if self.meta else ""
+        return self.meta.customer_id if self.meta and self.meta.customer_id else ""
 
     def __repr__(self) -> str:
         return (

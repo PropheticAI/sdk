@@ -2,15 +2,10 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from ..exceptions import APIError, ValidationError, raise_for_response
-from .models import (
-    Deployment,
-    DeploymentCreateResponse,
-    DeploymentDeleteResponse,
-    DeploymentListResponse,
-)
+from .models import Deployment
 
 if TYPE_CHECKING:
     from ..client import Prophet
@@ -18,200 +13,94 @@ if TYPE_CHECKING:
 
 class DeploymentsAPI:
     """
-    API for managing deployments (sub-tenants) under parent MSPs.
-
-    Accessed via `prophet.deployments`.
+    Manage deployments (sub-tenants) under a parent MSP. Accessed via
+    `prophet.deployments`. `parent_id` defaults to the authenticated tenant
+    (`prophet.customer_id`), so a parent MSP rarely needs to pass it.
 
     Example:
-        # List all sub-deployments
-        response = prophet.deployments.list(parent_id="parent-123")
-        for deployment in response.deployments:
-            print(deployment.name)
+        children = prophet.deployments.list()
+        for d in children:
+            print(d.name, d.customer_id)
 
-        # Create a new sub-deployment
-        result = prophet.deployments.create(
-            name="Sub Tenant",
-            handle="sub_tenant",
-            parent_id="parent-123",
-        )
-        print(result.deployment.customer.customer_id)
-
-        # Delete a sub-deployment
-        prophet.deployments.delete(
-            customer_id="sub-123",
-            parent_id="parent-123",
-        )
+        child = prophet.deployments.create(name="ACME Corp", handle="acme")
+        prophet.deployments.delete(child.customer_id)
     """
 
     def __init__(self, client: Prophet) -> None:
         self._client = client
 
-    def list(self, parent_id: str | None = None) -> DeploymentListResponse:
+    def list(self, parent_id: str | None = None) -> list[Deployment]:
         """
-        List all sub-deployments for a parent MSP.
+        List sub-deployments for a parent MSP.
 
         Args:
-            parent_id: The customer_id of the parent MSP (optional, defaults to
-                       the authenticated user's customer_id)
+            parent_id: parent MSP customer_id (defaults to the authenticated tenant).
 
         Returns:
-            DeploymentListResponse containing parent info and list of deployments
-
-        Raises:
-            AuthenticationError: If not authenticated
-            APIError: If the request fails
-
-        Example:
-            # List your own sub-deployments (if you're a parent MSP)
-            response = prophet.deployments.list()
-
-            # Or specify a different parent (requires god_mode)
-            response = prophet.deployments.list(parent_id="parent-123")
-
-            for d in response.deployments:
-                print(f"  - {d.name} ({d.customer_id})")
+            list[Deployment] (empty if there are none).
         """
-        params = {}
-        if parent_id:
-            params["parent_id"] = parent_id
-
+        params = {"parent_id": parent_id} if parent_id else {}
         response = self._client._request("GET", "/rest/deployments/1.0", params=params)
-
         raise_for_response(response)
 
-        # Debug: handle empty responses
-        if not response.text:
-            raise APIError(
-                f"Empty response from API (status={response.status_code})",
-                status_code=response.status_code,
-            )
+        data = self._json(response)
+        return [Deployment.model_validate(d) for d in data.get("deployments", [])]
 
-        try:
-            data = response.json()
-        except Exception:
-            raise APIError(
-                f"Invalid JSON response: {response.text[:500]}",
-                status_code=response.status_code,
-            ) from None
-
-        return DeploymentListResponse.from_response(data)
-
-    def create(
-        self,
-        name: str,
-        handle: str,
-        parent_id: str,
-    ) -> DeploymentCreateResponse:
+    def create(self, name: str, handle: str, parent_id: str | None = None) -> Deployment:
         """
-        Create a new sub-deployment under a parent MSP.
+        Create a sub-deployment under a parent MSP.
 
         Args:
-            name: Display name for the sub-deployment
-            handle: URL-safe identifier (will be slugified)
-            parent_id: The customer_id of the parent MSP
+            name: display name.
+            handle: url-safe identifier (slugified server-side).
+            parent_id: parent MSP customer_id (defaults to the authenticated tenant).
 
         Returns:
-            DeploymentCreateResponse with the created deployment info
-
-        Raises:
-            ValidationError: If required fields are missing
-            AuthenticationError: If not authenticated
-            APIError: If the request fails
-
-        Example:
-            result = prophet.deployments.create(
-                name="ACME Corp",
-                handle="acme_corp",
-                parent_id="parent-123",
-            )
-            print(f"Created: {result.deployment.customer.customer_id}")
+            The created Deployment.
         """
         if not name:
             raise ValidationError("name is required")
         if not handle:
             raise ValidationError("handle is required")
-        if not parent_id:
-            raise ValidationError("parent_id is required")
 
-        payload = {
-            "name": name,
-            "handle": handle,
-            "parent_id": parent_id,
-        }
-
+        parent = parent_id or self._client.customer_id
+        payload = {"name": name, "handle": handle, "parent_id": parent}
         response = self._client._request("POST", "/rest/deployments/1.0", json=payload)
-
         raise_for_response(response)
 
-        data = response.json()
-        return DeploymentCreateResponse.from_response(data)
+        # Response shape: {deployment: {customer: {...}, org: {...}}}
+        customer = self._json(response).get("deployment", {}).get("customer", {})
+        return Deployment.model_validate(customer)
 
-    def delete(
-        self,
-        customer_id: str,
-        parent_id: str,
-    ) -> DeploymentDeleteResponse:
-        """
-        Delete a sub-deployment from a parent MSP.
-
-        Args:
-            customer_id: The customer_id of the sub-deployment to delete
-            parent_id: The customer_id of the parent MSP
-
-        Returns:
-            DeploymentDeleteResponse with info about the deleted deployment
-
-        Raises:
-            ValidationError: If required fields are missing
-            AuthenticationError: If not authenticated
-            APIError: If the request fails (e.g., deployment not found)
-
-        Example:
-            result = prophet.deployments.delete(
-                customer_id="sub-123",
-                parent_id="parent-123",
-            )
-            print(f"Deleted: {result.deleted.name}")
-        """
+    def delete(self, customer_id: str, parent_id: str | None = None) -> None:
+        """Delete a sub-deployment (cascades deletion of its nodes and credentials)."""
         if not customer_id:
             raise ValidationError("customer_id is required")
-        if not parent_id:
-            raise ValidationError("parent_id is required")
 
-        payload = {
-            "customer_id": customer_id,
-            "parent_id": parent_id,
-        }
-
+        parent = parent_id or self._client.customer_id
+        payload = {"customer_id": customer_id, "parent_id": parent}
         response = self._client._request("DELETE", "/rest/deployments/1.0", json=payload)
-
         raise_for_response(response)
 
-        data = response.json()
-        return DeploymentDeleteResponse.from_response(data)
-
     def get(self, customer_id: str, parent_id: str | None = None) -> Deployment | None:
-        """
-        Get a specific sub-deployment by customer_id.
-
-        This is a convenience method that lists all deployments and finds
-        the matching one.
-
-        Args:
-            customer_id: The customer_id of the sub-deployment
-            parent_id: The customer_id of the parent MSP (optional, defaults to
-                       the authenticated user's customer_id)
-
-        Returns:
-            Deployment if found, None otherwise
-
-        Example:
-            deployment = prophet.deployments.get("sub-123")
-            if deployment:
-                print(deployment.name)
-        """
-        response = self.list(parent_id)
-        for deployment in response.deployments:
+        """Get a sub-deployment by customer_id, or None if not found."""
+        for deployment in self.list(parent_id):
             if deployment.customer_id == customer_id:
                 return deployment
         return None
+
+    @staticmethod
+    def _json(response: Any) -> dict[str, Any]:
+        if not response.text:
+            raise APIError(
+                f"Empty response from API (status={response.status_code})",
+                status_code=response.status_code,
+            )
+        try:
+            data: dict[str, Any] = response.json()
+        except Exception:
+            raise APIError(
+                f"Invalid JSON response: {response.text[:500]}",
+                status_code=response.status_code,
+            ) from None
+        return data

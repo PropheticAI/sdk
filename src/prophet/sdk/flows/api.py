@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import logging
 from typing import TYPE_CHECKING
 
 from .iterator import FlowIterator
@@ -12,21 +11,17 @@ if TYPE_CHECKING:
     from ..models import Sort, TimeFilter
     from ..query import Q
 
-logger = logging.getLogger("prophet.sdk")
-
 
 class FlowsAPI:
     """
-    API for querying flow records.
-
-    Accessed via `prophet.flows`.
+    API for querying flow records. Accessed via `prophet.flows`.
 
     Example:
         for flow in prophet.flows.query(
-            instances=["instance-1"],
+            instance="instance-1",
             query=Q("dst.port").eq(443),
         ):
-            print(flow.src_ip)
+            print(flow.src.ip)
     """
 
     def __init__(self, client: Prophet) -> None:
@@ -34,7 +29,7 @@ class FlowsAPI:
 
     def query(
         self,
-        instances: list[str],
+        instance: str,
         query: str | Q = "",
         start: TimeFilter | None = None,
         end: TimeFilter | None = None,
@@ -43,36 +38,23 @@ class FlowsAPI:
         size: int = 100,
     ) -> FlowIterator:
         """
-        Query flow records with automatic pagination.
+        Query flow records for one instance, with automatic pagination.
 
         Args:
-            instances: List of instance IDs to search
-            query: PQL query string or Q builder (empty = match all)
-            start: Start time filter (default: None)
-            end: End time filter (default: None)
-            sort: List of Sort specifications
-            fields: Fields to include in response (None = all)
-            size: Page size (default: 100, max: 25000)
+            instance: instance ID to search.
+            query: PQL query string or Q builder (empty = match all).
+            start: start time filter (default: None).
+            end: end time filter (default: None).
+            sort: list of Sort specifications.
+            fields: fields to include in the response (None = all).
+            size: page size (default: 100, max: 25000).
 
         Returns:
-            FlowIterator for iterating over results
-
-        Example:
-            for flow in prophet.flows.query(["inst-1"], Q("dst.port").eq(443)):
-                print(flow.src.ip)
+            FlowIterator over the matching flows.
         """
-        if len(instances) > 1:
-            # Pagination/results are currently single-instance: only instances[0]
-            # is read. Warn loudly so multi-instance callers don't silently lose data.
-            logger.warning(
-                "flows.query received %d instances but only the first (%r) is returned; "
-                "query one instance at a time until multi-instance fan-out is supported.",
-                len(instances),
-                instances[0],
-            )
         return FlowIterator(
             client=self._client,
-            instances=instances,
+            instance=instance,
             query=query,
             start=start,
             end=end,
@@ -83,7 +65,7 @@ class FlowsAPI:
 
     def __call__(
         self,
-        instances: list[str],
+        instance: str,
         query: str | Q = "",
         start: TimeFilter | None = None,
         end: TimeFilter | None = None,
@@ -91,13 +73,9 @@ class FlowsAPI:
         fields: list[str] | None = None,
         size: int = 100,
     ) -> FlowIterator:
-        """
-        Shortcut: prophet.flows(...) is equivalent to prophet.flows.query(...).
-
-        This maintains backward compatibility with the original API.
-        """
+        """Shortcut: prophet.flows(...) is equivalent to prophet.flows.query(...)."""
         return self.query(
-            instances=instances,
+            instance=instance,
             query=query,
             start=start,
             end=end,

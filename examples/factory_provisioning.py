@@ -85,9 +85,7 @@ WantedBy=multi-user.target
 # ── 1. Onboard an end customer (once per customer) ──────────────────────────
 def onboard_end_customer(prophet: Prophet, name: str, handle: str) -> str:
     """Create a child deployment under the authenticated parent. Returns its customer_id."""
-    parent_id = prophet.deployments.list().parent.customer_id
-    created = prophet.deployments.create(name=name, handle=handle, parent_id=parent_id)
-    return created.deployment.customer.customer_id
+    return prophet.deployments.create(name=name, handle=handle).customer_id
 
 
 # ── 2. Define a fleet capture profile (once per hardware SKU) ────────────────
@@ -177,8 +175,7 @@ def off_board_end_customer(prophet: Prophet, customer_id: str) -> None:
     it from the Prophet console; to replace a failed board, provision the new board
     (a new CPU ID is simply a new unit).
     """
-    parent_id = prophet.deployments.list().parent.customer_id
-    prophet.deployments.delete(customer_id=customer_id, parent_id=parent_id)
+    prophet.deployments.delete(customer_id)
 
 
 def _env(name: str) -> str:

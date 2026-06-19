@@ -1,12 +1,20 @@
 """Tests for data models."""
 
-import pytest
 from datetime import datetime
 
+import pytest
+
 from prophet.sdk import (
-    Now, HoursAgo, DaysAgo, MinutesAgo, WeeksAgo, At,
-    Flow, FlowPage, Sort, DirectionFields, Transport, Meta,
-    SessionMetrics, SimpleMetrics
+    At,
+    DaysAgo,
+    DirectionFields,
+    Flow,
+    FlowPage,
+    HoursAgo,
+    MinutesAgo,
+    Now,
+    Sort,
+    WeeksAgo,
 )
 
 

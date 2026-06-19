@@ -12,7 +12,7 @@ Example:
 
     # Query flows
     for flow in prophet.flows(
-        instances=["instance-1"],
+        instance="instance-1",
         query=Q("dst.port").eq(443),
         start=HoursAgo(24),
         end=Now(),
@@ -20,22 +20,14 @@ Example:
         print(f"{flow.src_ip}:{flow.src_port} -> {flow.dst_ip}:{flow.dst_port}")
 
     # Manage deployments
-    response = prophet.deployments.list(parent_id="parent-123")
-    for deployment in response.deployments:
+    for deployment in prophet.deployments.list():
         print(deployment.name)
 """
 
 from .client import HealthStatus, Prophet
 
 # Deployment submodule exports
-from .deployments import (
-    Deployment,
-    DeploymentCreateResponse,
-    DeploymentDeleteResponse,
-    DeploymentListResponse,
-    DeploymentsAPI,
-    ParentInfo,
-)
+from .deployments import Deployment, DeploymentsAPI
 from .exceptions import (
     APIError,
     AuthenticationError,
@@ -96,7 +88,7 @@ from .profiles import (
 )
 from .query import Q
 
-__version__ = "0.1.0"
+__version__ = "0.2.0"
 
 __all__ = [
     # Client
@@ -134,10 +126,6 @@ __all__ = [
     # Deployment API
     "DeploymentsAPI",
     "Deployment",
-    "DeploymentListResponse",
-    "DeploymentCreateResponse",
-    "DeploymentDeleteResponse",
-    "ParentInfo",
     # Nodes API
     "NodesAPI",
     "Node",
