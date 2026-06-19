@@ -2,9 +2,9 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, Literal
 
-from ..exceptions import APIError, AuthenticationError, ValidationError
+from ..exceptions import ValidationError, raise_for_response
 from .models import Profile
 
 if TYPE_CHECKING:
@@ -57,7 +57,7 @@ class ProfilesAPI:
         description: str | None = None,
         services: dict[str, Any] | None = None,
         tags: list[str] | None = None,
-        update_channel: str = "stable",
+        update_channel: Literal["stable", "dev", "pinned"] = "stable",
         fleet_staging: bool = False,
     ) -> Profile:
         """
@@ -89,14 +89,14 @@ class ProfilesAPI:
             payload["tags"] = tags
 
         response = self._client._request("POST", "/rest/profiles/1.0", json=payload)
-        self._handle_errors(response)
+        raise_for_response(response)
 
         return Profile.model_validate(response.json()["profile"])
 
     def list(self) -> list[Profile]:
         """List profiles owned by the authenticated customer (and its children)."""
         response = self._client._request("GET", "/rest/profiles/1.0")
-        self._handle_errors(response)
+        raise_for_response(response)
         return [Profile.model_validate(p) for p in response.json().get("profiles", [])]
 
     def delete(self, profile_id: str) -> None:
@@ -104,23 +104,4 @@ class ProfilesAPI:
         if not profile_id:
             raise ValidationError("profile_id is required")
         response = self._client._request("DELETE", f"/rest/profiles/1.0/{profile_id}")
-        self._handle_errors(response)
-
-    def _handle_errors(self, response) -> None:
-        if response.status_code in (200, 201):
-            return
-        try:
-            data = response.json()
-        except Exception:
-            data = {}
-        message = data.get("error") or data.get("message") or f"Request failed with status {response.status_code}"
-
-        if response.status_code == 401:
-            raise AuthenticationError(message=message, code=data.get("code"))
-        if response.status_code == 400:
-            raise ValidationError(message=message)
-        if response.status_code == 403:
-            raise APIError(message=message, status_code=403, error_type="authorization_error")
-        if response.status_code == 404:
-            raise APIError(message=message, status_code=404, error_type="not_found")
-        raise APIError(message=message, status_code=response.status_code)
+        raise_for_response(response)

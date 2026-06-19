@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import logging
 from typing import TYPE_CHECKING
 
 from .iterator import FlowIterator
@@ -10,6 +11,8 @@ if TYPE_CHECKING:
     from ..client import Prophet
     from ..models import Sort, TimeFilter
     from ..query import Q
+
+logger = logging.getLogger("prophet.sdk")
 
 
 class FlowsAPI:
@@ -58,6 +61,15 @@ class FlowsAPI:
             for flow in prophet.flows.query(["inst-1"], Q("dst.port").eq(443)):
                 print(flow.src.ip)
         """
+        if len(instances) > 1:
+            # Pagination/results are currently single-instance: only instances[0]
+            # is read. Warn loudly so multi-instance callers don't silently lose data.
+            logger.warning(
+                "flows.query received %d instances but only the first (%r) is returned; "
+                "query one instance at a time until multi-instance fan-out is supported.",
+                len(instances),
+                instances[0],
+            )
         return FlowIterator(
             client=self._client,
             instances=instances,

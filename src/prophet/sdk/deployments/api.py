@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from ..exceptions import APIError, AuthenticationError, ValidationError
+from ..exceptions import APIError, ValidationError, raise_for_response
 from .models import (
     Deployment,
     DeploymentCreateResponse,
@@ -77,7 +77,7 @@ class DeploymentsAPI:
 
         response = self._client._request("GET", "/rest/deployments/1.0", params=params)
 
-        self._handle_errors(response)
+        raise_for_response(response)
 
         # Debug: handle empty responses
         if not response.text:
@@ -88,11 +88,11 @@ class DeploymentsAPI:
 
         try:
             data = response.json()
-        except Exception as e:
+        except Exception:
             raise APIError(
                 f"Invalid JSON response: {response.text[:500]}",
                 status_code=response.status_code,
-            )
+            ) from None
 
         return DeploymentListResponse.from_response(data)
 
@@ -141,7 +141,7 @@ class DeploymentsAPI:
 
         response = self._client._request("POST", "/rest/deployments/1.0", json=payload)
 
-        self._handle_errors(response)
+        raise_for_response(response)
 
         data = response.json()
         return DeploymentCreateResponse.from_response(data)
@@ -185,7 +185,7 @@ class DeploymentsAPI:
 
         response = self._client._request("DELETE", "/rest/deployments/1.0", json=payload)
 
-        self._handle_errors(response)
+        raise_for_response(response)
 
         data = response.json()
         return DeploymentDeleteResponse.from_response(data)
@@ -215,40 +215,3 @@ class DeploymentsAPI:
             if deployment.customer_id == customer_id:
                 return deployment
         return None
-
-    def _handle_errors(self, response) -> None:
-        """Handle common API error responses."""
-        if response.status_code == 401:
-            data = response.json()
-            raise AuthenticationError(
-                message=data.get("error", "Authentication failed"),
-                code=data.get("code"),
-            )
-
-        if response.status_code == 400:
-            data = response.json()
-            raise ValidationError(
-                message=data.get("error", "Validation failed"),
-            )
-
-        if response.status_code == 403:
-            data = response.json()
-            raise APIError(
-                message=data.get("error", "Unauthorized"),
-                status_code=403,
-                error_type="authorization_error",
-            )
-
-        if response.status_code == 404:
-            data = response.json()
-            raise APIError(
-                message=data.get("error", "Not found"),
-                status_code=404,
-                error_type="not_found",
-            )
-
-        if response.status_code not in (200, 201):
-            raise APIError(
-                message=f"Request failed with status {response.status_code}",
-                status_code=response.status_code,
-            )

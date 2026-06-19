@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from enum import Enum
-from typing import Any, Union
+from typing import Any
 
 
 class Operator(Enum):
@@ -20,69 +20,6 @@ class Operator(Enum):
     IN = "in"
     WI = "wi"
     NWI = "nwi"
-
-
-class _FieldBuilder:
-    """Builder for a single field condition."""
-
-    def __init__(self, field: str, parent: Q) -> None:
-        self._field = field
-        self._parent = parent
-
-    def eq(self, value: Union[str, int, float]) -> Q:
-        """Equal to (field eq value)."""
-        self._parent._add_condition(self._field, Operator.EQ, value)
-        return self._parent
-
-    def ne(self, value: Union[str, int, float]) -> Q:
-        """Not equal to (field ne value)."""
-        self._parent._add_condition(self._field, Operator.NE, value)
-        return self._parent
-
-    def gt(self, value: Union[int, float]) -> Q:
-        """Greater than (field gt value)."""
-        self._parent._add_condition(self._field, Operator.GT, value)
-        return self._parent
-
-    def lt(self, value: Union[int, float]) -> Q:
-        """Less than (field lt value)."""
-        self._parent._add_condition(self._field, Operator.LT, value)
-        return self._parent
-
-    def gte(self, value: Union[int, float]) -> Q:
-        """Greater than or equal (field gte value)."""
-        self._parent._add_condition(self._field, Operator.GTE, value)
-        return self._parent
-
-    def lte(self, value: Union[int, float]) -> Q:
-        """Less than or equal (field lte value)."""
-        self._parent._add_condition(self._field, Operator.LTE, value)
-        return self._parent
-
-    def exists(self) -> Q:
-        """Field exists (field ex)."""
-        self._parent._add_condition(self._field, Operator.EX, None)
-        return self._parent
-
-    def not_exists(self) -> Q:
-        """Field does not exist (field nex)."""
-        self._parent._add_condition(self._field, Operator.NEX, None)
-        return self._parent
-
-    def in_(self, values: list[Union[str, int]]) -> Q:
-        """Value in list (field in [val1, val2])."""
-        self._parent._add_condition(self._field, Operator.IN, values)
-        return self._parent
-
-    def wildcard(self, pattern: str) -> Q:
-        """Wildcard match (field wi pattern)."""
-        self._parent._add_condition(self._field, Operator.WI, pattern)
-        return self._parent
-
-    def not_wildcard(self, pattern: str) -> Q:
-        """Not wildcard match (field nwi pattern)."""
-        self._parent._add_condition(self._field, Operator.NWI, pattern)
-        return self._parent
 
 
 class Q:
@@ -145,10 +82,6 @@ class Q:
         instance._parts.append(pql)
         return instance
 
-    def _get_field_builder(self, name: str) -> _FieldBuilder:
-        """Get a field builder for the given field name."""
-        return _FieldBuilder(name, self)
-
     def _add_condition(self, field: str, op: Operator, value: Any) -> None:
         """Add a condition to the query."""
         # Add pending conjunction if any
@@ -180,7 +113,7 @@ class Q:
         return str(value)
 
     # Operator methods that use the pending field
-    def eq(self, value: Union[str, int, float]) -> Q:
+    def eq(self, value: str | int | float) -> Q:
         """Equal to (field eq value)."""
         if self._pending_field is None:
             raise ValueError("No field specified. Use Q('field_name').eq(value)")
@@ -188,7 +121,7 @@ class Q:
         self._pending_field = None
         return self
 
-    def ne(self, value: Union[str, int, float]) -> Q:
+    def ne(self, value: str | int | float) -> Q:
         """Not equal to (field ne value)."""
         if self._pending_field is None:
             raise ValueError("No field specified")
@@ -196,7 +129,7 @@ class Q:
         self._pending_field = None
         return self
 
-    def gt(self, value: Union[int, float]) -> Q:
+    def gt(self, value: int | float) -> Q:
         """Greater than (field gt value)."""
         if self._pending_field is None:
             raise ValueError("No field specified")
@@ -204,7 +137,7 @@ class Q:
         self._pending_field = None
         return self
 
-    def lt(self, value: Union[int, float]) -> Q:
+    def lt(self, value: int | float) -> Q:
         """Less than (field lt value)."""
         if self._pending_field is None:
             raise ValueError("No field specified")
@@ -212,7 +145,7 @@ class Q:
         self._pending_field = None
         return self
 
-    def gte(self, value: Union[int, float]) -> Q:
+    def gte(self, value: int | float) -> Q:
         """Greater than or equal (field gte value)."""
         if self._pending_field is None:
             raise ValueError("No field specified")
@@ -220,7 +153,7 @@ class Q:
         self._pending_field = None
         return self
 
-    def lte(self, value: Union[int, float]) -> Q:
+    def lte(self, value: int | float) -> Q:
         """Less than or equal (field lte value)."""
         if self._pending_field is None:
             raise ValueError("No field specified")
@@ -244,7 +177,7 @@ class Q:
         self._pending_field = None
         return self
 
-    def in_(self, values: list[Union[str, int]]) -> Q:
+    def in_(self, values: list[str | int]) -> Q:
         """Value in list (field in [val1, val2])."""
         if self._pending_field is None:
             raise ValueError("No field specified")

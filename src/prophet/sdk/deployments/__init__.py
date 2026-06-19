@@ -2,13 +2,13 @@
 
 from .api import DeploymentsAPI
 from .models import (
+    CreatedDeployment,
+    DeletedDeployment,
     Deployment,
     DeploymentCreateResponse,
     DeploymentDeleteResponse,
     DeploymentListResponse,
     ParentInfo,
-    CreatedDeployment,
-    DeletedDeployment,
 )
 
 __all__ = [

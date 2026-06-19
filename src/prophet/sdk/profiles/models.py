@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import Any
+from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict
 
@@ -22,7 +22,7 @@ class Profile(BaseModel):
     description: str | None = None
     services: dict[str, Any] | None = None
     tags: list[str] | None = None
-    update_channel: str | None = None
+    update_channel: Literal["stable", "dev", "pinned"] | str | None = None
     auto_update: bool | None = None
     fleet_staging: bool | None = None
 

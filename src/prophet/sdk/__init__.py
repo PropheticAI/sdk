@@ -26,16 +26,46 @@ Example:
 """
 
 from .client import HealthStatus, Prophet
+
+# Deployment submodule exports
+from .deployments import (
+    Deployment,
+    DeploymentCreateResponse,
+    DeploymentDeleteResponse,
+    DeploymentListResponse,
+    DeploymentsAPI,
+    ParentInfo,
+)
 from .exceptions import (
     APIError,
     AuthenticationError,
     ConfigurationError,
     ConnectionError,
-    ProphetError,
     PQLSyntaxError,
+    ProphetError,
     TimeoutError,
     TokenExpiredError,
     ValidationError,
+)
+
+# Flow submodule exports
+from .flows import (
+    BeaconData,
+    DirectionFields,
+    Flow,
+    FlowIterator,
+    FlowPage,
+    FlowsAPI,
+    GeoEntry,
+    Meta,
+    QualityMetrics,
+    RateMetrics,
+    SessionMetrics,
+    SimpleMetrics,
+    Threat,
+    TimingMetrics,
+    Transport,
+    VolumeMetrics,
 )
 from .models import (
     At,
@@ -47,54 +77,24 @@ from .models import (
     TimeFilter,
     WeeksAgo,
 )
-from .query import Q
-
-# Flow submodule exports
-from .flows import (
-    FlowIterator,
-    FlowsAPI,
-    Flow,
-    FlowPage,
-    DirectionFields,
-    Transport,
-    Meta,
-    Threat,
-    BeaconData,
-    SessionMetrics,
-    SimpleMetrics,
-    GeoEntry,
-    VolumeMetrics,
-    RateMetrics,
-    QualityMetrics,
-    TimingMetrics,
-)
-
-# Deployment submodule exports
-from .deployments import (
-    DeploymentsAPI,
-    Deployment,
-    DeploymentListResponse,
-    DeploymentCreateResponse,
-    DeploymentDeleteResponse,
-    ParentInfo,
-)
 
 # Nodes submodule exports
 from .nodes import (
-    NodesAPI,
     Node,
     NodeConnection,
     NodeHealth,
+    NodesAPI,
     ProvisionedUnit,
     derive_machine_id,
 )
 
 # Profiles submodule exports
 from .profiles import (
-    ProfilesAPI,
     Profile,
+    ProfilesAPI,
     lightweight_packet_services,
 )
+from .query import Q
 
 __version__ = "0.1.0"
 

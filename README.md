@@ -249,7 +249,7 @@ result.deleted  # DeletedDeployment object
 ## Context Manager
 
 ```python
-with Prophet(base_url, client_id, client_secret) as prophet:
+with Prophet(client_id="your_client_id", client_secret="your_client_secret") as prophet:
     for flow in prophet.flows(...):
         process(flow)
 # Session automatically closed

@@ -91,3 +91,37 @@ class TimeoutError(ProphetError):
     """Request timeout."""
 
     pass
+
+
+def raise_for_response(response: Any) -> None:
+    """
+    Map a non-2xx HTTP response to the right Prophet exception, or return for 2xx.
+
+    Single source of truth for the REST error contract so every API surface
+    raises consistently. Tolerates a non-JSON error body (e.g. a bare 500 from a
+    proxy) instead of crashing while trying to parse it.
+    """
+    if response.status_code in (200, 201):
+        return
+
+    try:
+        data = response.json()
+    except Exception:
+        data = {}
+
+    message = (
+        data.get("error")
+        or data.get("message")
+        or f"Request failed with status {response.status_code}"
+    )
+    status = response.status_code
+
+    if status == 401:
+        raise AuthenticationError(message=message, code=data.get("code"))
+    if status == 400:
+        raise ValidationError(message=message)
+    if status == 403:
+        raise APIError(message=message, status_code=403, error_type="authorization_error")
+    if status == 404:
+        raise APIError(message=message, status_code=404, error_type="not_found")
+    raise APIError(message=message, status_code=status)

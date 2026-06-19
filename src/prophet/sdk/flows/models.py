@@ -3,11 +3,10 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Any
 
-from pydantic import BaseModel, Field, ConfigDict
-
+from pydantic import BaseModel, ConfigDict, Field
 
 # =============================================================================
 # Pydantic Base Config
@@ -500,10 +499,10 @@ class Flow(FlowModel):
     # Convenience properties
     @property
     def timestamp_dt(self) -> datetime | None:
-        """Get timestamp as datetime object."""
+        """Get timestamp as a timezone-aware UTC datetime (wire value is epoch-ms UTC)."""
         if self.timestamp is None:
             return None
-        return datetime.fromtimestamp(self.timestamp / 1000)
+        return datetime.fromtimestamp(self.timestamp / 1000, tz=timezone.utc)
 
     @property
     def bytes(self) -> float:

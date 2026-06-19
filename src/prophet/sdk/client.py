@@ -2,9 +2,12 @@
 
 from __future__ import annotations
 
+import logging
 from dataclasses import dataclass
 
 import requests
+from requests.adapters import HTTPAdapter
+from urllib3.util.retry import Retry
 
 from .auth import TokenManager
 from .deployments import DeploymentsAPI
@@ -12,6 +15,8 @@ from .exceptions import APIError, ConnectionError
 from .flows import FlowsAPI
 from .nodes import NodesAPI
 from .profiles import ProfilesAPI
+
+logger = logging.getLogger("prophet.sdk")
 
 
 @dataclass
@@ -31,6 +36,8 @@ class Prophet:
     Provides access to:
     - `prophet.flows` - Query flow records
     - `prophet.deployments` - Manage sub-deployments
+    - `prophet.nodes` - Provision and inspect nodes
+    - `prophet.profiles` - Manage node capture-config profiles
 
     Example:
         from prophet.sdk import Prophet, Q, HoursAgo, Now
@@ -67,6 +74,7 @@ class Prophet:
         client_secret: str,
         timeout: float = 30.0,
         refresh_threshold: int = 300,
+        max_retries: int = 3,
     ) -> None:
         """
         Initialize the Prophet client.
@@ -77,10 +85,27 @@ class Prophet:
             client_secret: OAuth2 client secret
             timeout: Request timeout in seconds (default: 30)
             refresh_threshold: Seconds before token expiry to refresh (default: 300)
+            max_retries: Retries for transient failures (429/5xx) on idempotent
+                requests, with exponential backoff (default: 3). POST is not
+                auto-retried, so provisioning never double-mints a credential.
         """
         self._base_url = base_url.rstrip("/")
         self._timeout = timeout
         self._session = requests.Session()
+
+        # Retry transient failures on idempotent methods only (urllib3's default
+        # allowed_methods excludes POST), so reads self-heal across blips but a
+        # provision POST is never silently retried.
+        retry = Retry(
+            total=max_retries,
+            backoff_factor=0.5,
+            status_forcelist=(429, 500, 502, 503, 504),
+            raise_on_status=False,
+        )
+        adapter = HTTPAdapter(max_retries=retry)
+        self._session.mount("https://", adapter)
+        self._session.mount("http://", adapter)
+
         self._auth = TokenManager(
             base_url=self._base_url,
             client_id=client_id,
@@ -217,6 +242,7 @@ class Prophet:
             Response object
         """
         url = f"{self._base_url}{path}"
+        logger.debug("%s %s", method, path)
 
         # Get fresh token
         token = self._auth.get_token()

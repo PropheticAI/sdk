@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Any
+from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict
 
@@ -41,7 +41,8 @@ class Node(NodeModel):
     customer_id: str
     customer_name: str | None = None
     description: str | None = None
-    status: str | None = None  # active | pending_approval | staged
+    # `| str` keeps forward-compat if the server adds a status we don't know yet.
+    status: Literal["active", "pending_approval", "staged"] | str | None = None
     profile_id: str | None = None
     profile_name: str | None = None
     connection: NodeConnection = NodeConnection()
@@ -62,14 +63,17 @@ class Node(NodeModel):
         return self.is_active and self.connection.control_plane
 
     def __repr__(self) -> str:
-        return f"Node({self.node_id}, status={self.status!r}, control_plane={self.connection.control_plane})"
+        cp = self.connection.control_plane
+        return f"Node({self.node_id}, status={self.status!r}, control_plane={cp})"
 
 
-@dataclass
+@dataclass(frozen=True)
 class ProvisionedUnit:
     """
     Result of provisioning a unit. `access_key` is shown exactly once — store it
     in your ops DB and write it (with machine_id) into the unit's config.
+
+    Immutable: the credential is read-once and should not be mutated in place.
     """
 
     access_key: str
@@ -117,4 +121,7 @@ class ProvisionedUnit:
     def __repr__(self) -> str:
         # Never echo the secret half of the access_key in logs/reprs.
         client_id = self.access_key.split(".", 1)[0]
-        return f"ProvisionedUnit(customer_id={self.customer_id!r}, machine_id={self.machine_id!r}, client_id={client_id!r})"
+        return (
+            f"ProvisionedUnit(customer_id={self.customer_id!r}, "
+            f"machine_id={self.machine_id!r}, client_id={client_id!r})"
+        )

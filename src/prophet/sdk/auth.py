@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import logging
 import time
 from typing import TYPE_CHECKING
 
@@ -11,6 +12,8 @@ from .exceptions import AuthenticationError
 
 if TYPE_CHECKING:
     from requests import Session
+
+logger = logging.getLogger("prophet.sdk")
 
 
 class TokenManager:
@@ -85,6 +88,7 @@ class TokenManager:
 
     def _fetch_token(self) -> None:
         """Fetch a new token from the OAuth2 endpoint."""
+        logger.debug("refreshing access token")
         url = f"{self._base_url}/rest/oauth2/token/1.0"
         payload = {
             "client_id": self._client_id,

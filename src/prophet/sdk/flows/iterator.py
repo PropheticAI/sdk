@@ -2,7 +2,8 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, Iterator
+from collections.abc import Iterator
+from typing import TYPE_CHECKING, Any
 
 from ..exceptions import APIError, AuthenticationError
 from .models import Flow, FlowPage
@@ -75,16 +76,20 @@ class FlowIterator:
         """
         return self._fetch_page(0)
 
-    def collect(self) -> list[Flow]:
+    def collect(self, limit: int | None = None) -> list[Flow]:
         """
-        Collect all results into a list.
+        Collect results into a list. EAGER — pass a `limit` (or call take() first)
+        to bound memory on large result sets; an unbounded collect() buffers the
+        entire match in RAM.
 
-        Warning: Be careful with large result sets. Consider using
-        take() to limit results first.
+        Args:
+            limit: Maximum number of flows to collect (None = all matches)
 
         Returns:
-            List of all Flow objects
+            List of Flow objects
         """
+        if limit is not None:
+            self._limit = limit
         return list(self)
 
     def next_page(self) -> FlowPage | None:

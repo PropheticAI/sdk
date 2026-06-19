@@ -5,7 +5,7 @@ from __future__ import annotations
 import uuid
 from typing import TYPE_CHECKING
 
-from ..exceptions import APIError, AuthenticationError, ValidationError
+from ..exceptions import ValidationError, raise_for_response
 from .models import Node, ProvisionedUnit
 
 if TYPE_CHECKING:
@@ -90,7 +90,7 @@ class NodesAPI:
             payload["profile_id"] = profile_id
 
         response = self._client._request("POST", "/rest/nodes/provision/1.0", json=payload)
-        self._handle_errors(response)
+        raise_for_response(response)
 
         data = response.json()
         return ProvisionedUnit.from_response(data, machine_id=resolved_machine_id)
@@ -110,7 +110,7 @@ class NodesAPI:
             params["hardware"] = "true"
 
         response = self._client._request("GET", "/rest/nodes/1.0", params=params)
-        self._handle_errors(response)
+        raise_for_response(response)
 
         data = response.json()
         return [Node.model_validate(n) for n in data.get("nodes", [])]
@@ -129,7 +129,7 @@ class NodesAPI:
         response = self._client._request("GET", f"/rest/nodes/1.0/{node_id}", params=params)
         if response.status_code == 404:
             return None
-        self._handle_errors(response)
+        raise_for_response(response)
 
         return Node.model_validate(response.json())
 
@@ -146,22 +146,3 @@ class NodesAPI:
             if getattr(node, "machine_id", None) == machine_id:
                 return node
         return None
-
-    def _handle_errors(self, response) -> None:
-        if response.status_code in (200, 201):
-            return
-        try:
-            data = response.json()
-        except Exception:
-            data = {}
-        message = data.get("error") or data.get("message") or f"Request failed with status {response.status_code}"
-
-        if response.status_code == 401:
-            raise AuthenticationError(message=message, code=data.get("code"))
-        if response.status_code == 400:
-            raise ValidationError(message=message)
-        if response.status_code == 403:
-            raise APIError(message=message, status_code=403, error_type="authorization_error")
-        if response.status_code == 404:
-            raise APIError(message=message, status_code=404, error_type="not_found")
-        raise APIError(message=message, status_code=response.status_code)

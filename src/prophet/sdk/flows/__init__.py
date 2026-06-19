@@ -3,20 +3,20 @@
 from .api import FlowsAPI
 from .iterator import FlowIterator
 from .models import (
+    BeaconData,
+    DirectionFields,
     Flow,
     FlowPage,
-    DirectionFields,
-    Transport,
+    GeoEntry,
     Meta,
-    Threat,
-    BeaconData,
+    QualityMetrics,
+    RateMetrics,
     SessionMetrics,
     SimpleMetrics,
-    GeoEntry,
-    VolumeMetrics,
-    RateMetrics,
-    QualityMetrics,
+    Threat,
     TimingMetrics,
+    Transport,
+    VolumeMetrics,
 )
 
 __all__ = [

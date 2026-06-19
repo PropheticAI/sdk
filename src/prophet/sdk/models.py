@@ -5,8 +5,7 @@ from __future__ import annotations
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from datetime import datetime
-from typing import Any
-
+from typing import Any, Literal
 
 # =============================================================================
 # Time Filters (for query building)
@@ -108,7 +107,7 @@ class Sort:
     """Sort specification for query results."""
 
     field: str
-    order: str = "desc"
+    order: Literal["asc", "desc"] = "desc"
 
     def __post_init__(self) -> None:
         if self.order not in ("asc", "desc"):
