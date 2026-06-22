@@ -13,6 +13,7 @@ from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
 
 from .auth import TokenManager
+from .collector import CollectorAPI
 from .deployments import DeploymentsAPI
 from .exceptions import APIError, AuthenticationError, ConnectionError
 from .flows import FlowsAPI
@@ -54,6 +55,7 @@ class Prophet:
     - `prophet.deployments` - Manage sub-deployments
     - `prophet.nodes` - Provision and inspect nodes
     - `prophet.profiles` - Manage node capture-config profiles
+    - `prophet.collector` - Download the prophet-node binary
 
     Example:
         from prophet.sdk import Prophet, Q, HoursAgo, Now
@@ -135,6 +137,7 @@ class Prophet:
         self._deployments = DeploymentsAPI(self)
         self._nodes = NodesAPI(self)
         self._profiles = ProfilesAPI(self)
+        self._collector = CollectorAPI(self)
 
     @property
     def flows(self) -> FlowsAPI:
@@ -203,6 +206,19 @@ class Prophet:
             profile = prophet.profiles.create(name="Fleet A")
         """
         return self._profiles
+
+    @property
+    def collector(self) -> CollectorAPI:
+        """
+        Access the Collector API for downloading the prophet-node binary.
+
+        Returns:
+            CollectorAPI instance
+
+        Example:
+            binary = prophet.collector.download(arch="arm7", extract=True, dest="./dist")
+        """
+        return self._collector
 
     @property
     def customer_id(self) -> str:

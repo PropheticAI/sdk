@@ -189,6 +189,11 @@ def _env(name: str) -> str:
 def _run_setup(prophet: Prophet, customer: str, handle: str) -> int:
     deployment_id = onboard_end_customer(prophet, customer, handle)
     profile_id = create_fleet_profile(prophet, f"{customer} fleet", interface_patterns=["eth*"])
+
+    # Pull the latest stable ARM7 collector binary for the line (once; flash to every unit).
+    binary = prophet.collector.download(arch="arm7", extract=True, dest="./dist")
+    print(f"Collector binary: {binary}")
+
     print("One-time setup complete. Export these for per-unit provisioning:")
     print(f"  export PROPHET_DEPLOYMENT_ID={deployment_id}")
     print(f"  export PROPHET_PROFILE_ID={profile_id}")

@@ -25,6 +25,7 @@ Example:
 """
 
 from .client import HealthStatus, Prophet
+from .collector import CollectorAPI
 
 # Deployment submodule exports
 from .deployments import Deployment, DeploymentsAPI
@@ -88,7 +89,7 @@ from .profiles import (
 )
 from .query import Q
 
-__version__ = "0.2.0"
+__version__ = "0.3.0"
 
 __all__ = [
     # Client
@@ -137,6 +138,8 @@ __all__ = [
     "ProfilesAPI",
     "Profile",
     "lightweight_packet_services",
+    # Collector API
+    "CollectorAPI",
     # Exceptions
     "ProphetError",
     "ConfigurationError",

@@ -197,6 +197,24 @@ deployment.parent       # "parent-123"
 deployment.created_at   # "2026-02-04T16:00:00Z"
 ```
 
+## Collector Binary
+
+Download the prophet-node binary (latest stable per platform/channel) — no GitHub
+access needed; the controller proxies the signed release.
+
+```python
+# Fetch + unpack the latest stable ARM7 binary, ready to flash
+binary = prophet.collector.download(arch="arm7", extract=True, dest="./dist")
+# binary -> ./dist/prophet (executable)
+
+# Other architectures / channels
+prophet.collector.download(os="linux", arch="amd64")          # tarball, current dir
+prophet.collector.download(arch="arm64", channel="dev")
+
+# Just the (stable, always-latest) URL for an install script
+url = prophet.collector.download_url(arch="arm7")
+```
+
 ## Context Manager
 
 ```python
