@@ -52,16 +52,16 @@ from pathlib import Path
 from prophet.sdk import Prophet, ProvisionedUnit
 from prophet.sdk.profiles import lightweight_packet_services
 
-# State root on the device. Pointing PROPHET_DIR at a directory on the unit's
-# OTA-persistent partition (here /data/apps/prophet) keeps the config AND the
-# enrollment credential alive across firmware updates that replace the rootfs.
-# Requires a prophet-node build with PROPHET_DIR support.
+# State root on the device. Passing --prophet-dir points the node at a directory
+# on the unit's OTA-persistent partition (here /data/apps/prophet) so config AND
+# the enrollment credential survive firmware updates that replace the rootfs.
+# Requires a prophet-node build with --prophet-dir support (>= v0.2.6).
 DEVICE_STATE_DIR = "/data/apps/prophet/state"
 DEVICE_SPOOL_DIR = "/data/apps/prophet/spool"
 
-# The systemd unit the build line installs at /lib/systemd/system/. ExecStart is
-# bare — the binary reads all bootstrap config from prophet_collector.yaml under
-# PROPHET_DIR. Runs as root for packet capture; Restart=always lets a unit
+# The systemd unit the build line installs at /lib/systemd/system/. All config is
+# passed as args (no env) — the node reads prophet_collector.yaml under the
+# --prophet-dir root. Runs as root for packet capture; Restart=always lets a unit
 # flashed offline self-enroll once it first reaches a network.
 SYSTEMD_UNIT = f"""\
 [Unit]
@@ -71,8 +71,7 @@ Wants=network-online.target
 
 [Service]
 Type=simple
-Environment=PROPHET_DIR={DEVICE_STATE_DIR}
-ExecStart=/data/apps/prophet/bin/prophet
+ExecStart=/data/apps/prophet/bin/prophet --prophet-dir {DEVICE_STATE_DIR}
 Restart=always
 RestartSec=5
 User=root
@@ -133,7 +132,7 @@ def provision_unit(
     out_dir.mkdir(parents=True, exist_ok=True)
     os.chmod(out_dir, 0o700)
 
-    # prophet_collector.yaml -> $PROPHET_DIR/prophet_collector.yaml on the device.
+    # prophet_collector.yaml -> the --prophet-dir root on the device.
     # Holds the secret access_key, so write it 0600.
     yaml_path = out_dir / "prophet_collector.yaml"
     yaml_path.write_text(unit.collector_yaml(env="prod", spool_dir=DEVICE_SPOOL_DIR))
