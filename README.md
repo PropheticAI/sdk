@@ -245,6 +245,11 @@ prophet.collector.download(arch="arm64", channel="dev")
 url = prophet.collector.download_url(arch="arm7")
 ```
 
+Downloads are cached on disk by the release's versioned filename, so flashing a
+batch of the same SKU doesn't re-transfer the binary; a new release is fetched
+automatically. Override the location with `$PROPHET_SDK_CACHE_DIR`, or pass
+`cache=False` to force a fresh fetch.
+
 ## Context Manager
 
 ```python

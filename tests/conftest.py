@@ -44,6 +44,12 @@ def register_token(aud: str = "test-parent") -> None:
     )
 
 
+@pytest.fixture(autouse=True)
+def _isolate_collector_cache(tmp_path, monkeypatch):
+    """Point the collector binary cache at a per-test temp dir, never ~/.cache."""
+    monkeypatch.setenv("PROPHET_SDK_CACHE_DIR", str(tmp_path / "_cache"))
+
+
 @pytest.fixture
 def prophet() -> Prophet:
     """A client pointed at the test base URL with retries disabled (fast failures)."""

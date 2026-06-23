@@ -2,9 +2,11 @@
 
 from __future__ import annotations
 
+import os
 import re
+import shutil
 import tarfile
-import tempfile
+import uuid
 from pathlib import Path
 from typing import TYPE_CHECKING, Literal
 
@@ -31,10 +33,14 @@ class CollectorAPI:
     the private release repo), so callers need no GitHub access. This lets a factory
     line pull the binary through the same SDK it uses to provision.
 
+    Downloads are cached on disk keyed by the release's versioned filename, so
+    repeated calls (e.g. flashing a batch of the same SKU) don't re-transfer the
+    binary — but a new release (new filename) is fetched automatically. Cache dir:
+    $PROPHET_SDK_CACHE_DIR, else $XDG_CACHE_HOME/prophet-sdk, else ~/.cache/prophet-sdk.
+
     Example:
         # Fetch + unpack the latest stable ARM7 binary, ready to flash
         binary = prophet.collector.download(arch="arm7", extract=True, dest="./dist")
-        # binary -> ./dist/prophet (executable)
 
         # Or just the URL for a curl-based install step
         url = prophet.collector.download_url(arch="arm7")
@@ -64,9 +70,10 @@ class CollectorAPI:
         arch: Arch = "amd64",
         channel: Channel = "stable",
         extract: bool = False,
+        cache: bool = True,
     ) -> Path:
         """
-        Download the collector binary for a platform.
+        Download the collector binary for a platform (cached on disk by version).
 
         Args:
             dest: file path for the tarball, or (with extract=True) the directory to
@@ -75,50 +82,73 @@ class CollectorAPI:
             channel: "stable" (default) or "dev".
             extract: if True, unpack the .tar.gz and return the path to the
                      executable `prophet` binary (chmod +x applied).
+            cache: reuse a cached binary of the same version if present (default True).
+                   Set False to force a fresh fetch.
 
         Returns:
             Path to the downloaded tarball, or to the extracted binary if extract=True.
         """
+        tarball = self._fetch_tarball(os=os, arch=arch, channel=channel, cache=cache)
+
+        if extract:
+            out_dir = Path(dest) if dest else Path.cwd()
+            return _extract_binary(tarball, out_dir)
+
+        target = Path(dest) if dest else Path(tarball.name)
+        if target.resolve() != tarball.resolve():
+            target.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copyfile(tarball, target)
+        return target
+
+    def _fetch_tarball(self, *, os: OS, arch: Arch, channel: Channel, cache: bool) -> Path:
+        """Return a path to the release tarball, from cache when possible."""
         url = self.download_url(os=os, arch=arch, channel=channel)
         resp = self._client._session.get(
             url, stream=True, timeout=self._client._timeout, allow_redirects=True
         )
         raise_for_response(resp)
 
-        filename = _filename_from_response(resp) or f"prophet_collector_{os}_{arch}.tar.gz"
+        filename = _filename_from_response(resp)
+        # Only cache when the server gives a versioned filename — otherwise we
+        # can't tell builds apart and could serve a stale binary.
+        if not filename:
+            tmp = _cache_dir() / f"prophet_collector_{os}_{arch}_{uuid.uuid4().hex}.tar.gz"
+            _stream_to_file(resp, tmp)
+            return tmp
 
-        if extract:
-            return self._download_and_extract(resp, dest, filename)
+        cache_file = _cache_dir() / filename
+        if cache and cache_file.exists():
+            resp.close()  # cache hit — skip the (large) body transfer
+            return cache_file
 
-        tarball = Path(dest) if dest else Path(filename)
-        _stream_to_file(resp, tarball)
-        return tarball
+        _stream_to_cache(resp, cache_file)
+        return cache_file
 
-    def _download_and_extract(
-        self, resp: requests.Response, dest: str | Path | None, filename: str
-    ) -> Path:
-        out_dir = Path(dest) if dest else Path.cwd()
-        out_dir.mkdir(parents=True, exist_ok=True)
-        binary = out_dir / _BINARY_NAME
 
-        with tempfile.TemporaryDirectory() as tmp:
-            tarball = Path(tmp) / filename
-            _stream_to_file(resp, tarball)
-            with tarfile.open(tarball, "r:gz") as tar:
-                member = next(
-                    (m for m in tar.getmembers() if Path(m.name).name == _BINARY_NAME), None
-                )
-                if member is None:
-                    raise APIError(f"'{_BINARY_NAME}' not found in {filename}", status_code=0)
-                # Read the member directly (no tar.extract) — avoids path-traversal
-                # and the 3.14 extraction-filter deprecation; we control the dest.
-                src = tar.extractfile(member)
-                if src is None:
-                    raise APIError(f"'{_BINARY_NAME}' is not a file in {filename}", status_code=0)
-                binary.write_bytes(src.read())
+def _extract_binary(tarball: Path, out_dir: Path) -> Path:
+    out_dir.mkdir(parents=True, exist_ok=True)
+    binary = out_dir / _BINARY_NAME
+    with tarfile.open(tarball, "r:gz") as tar:
+        member = next((m for m in tar.getmembers() if Path(m.name).name == _BINARY_NAME), None)
+        if member is None:
+            raise APIError(f"'{_BINARY_NAME}' not found in {tarball.name}", status_code=0)
+        # Read the member directly (no tar.extract) — avoids path-traversal and the
+        # 3.14 extraction-filter deprecation; we control the dest.
+        src = tar.extractfile(member)
+        if src is None:
+            raise APIError(f"'{_BINARY_NAME}' is not a file in {tarball.name}", status_code=0)
+        binary.write_bytes(src.read())
+    binary.chmod(0o755)
+    return binary
 
-        binary.chmod(0o755)
-        return binary
+
+def _cache_dir() -> Path:
+    base = (
+        os.environ.get("PROPHET_SDK_CACHE_DIR")
+        or os.environ.get("XDG_CACHE_HOME")
+        or str(Path.home() / ".cache")
+    )
+    return Path(base) / "prophet-sdk" / "collector"
 
 
 def _filename_from_response(resp: requests.Response) -> str | None:
@@ -133,3 +163,14 @@ def _stream_to_file(resp: requests.Response, path: Path) -> None:
         for chunk in resp.iter_content(chunk_size=64 * 1024):
             if chunk:
                 f.write(chunk)
+
+
+def _stream_to_cache(resp: requests.Response, cache_file: Path) -> None:
+    """Stream to a temp file in the cache dir, then atomically rename into place."""
+    cache_file.parent.mkdir(parents=True, exist_ok=True)
+    tmp = cache_file.with_name(f".{cache_file.name}.{uuid.uuid4().hex}.tmp")
+    try:
+        _stream_to_file(resp, tmp)
+        os.replace(tmp, cache_file)
+    finally:
+        tmp.unlink(missing_ok=True)
