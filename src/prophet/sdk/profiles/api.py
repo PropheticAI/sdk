@@ -6,26 +6,30 @@ from typing import TYPE_CHECKING, Any, Literal
 
 from ..exceptions import ValidationError, raise_for_response
 from .models import Profile
+from .services import PacketServices, ProfileServices
 
 if TYPE_CHECKING:
     from ..client import Prophet
 
 
-def lightweight_packet_services(interface_patterns: list[str] | None = None) -> dict[str, Any]:
+def lightweight_packet_services(interface_patterns: list[str] | None = None) -> ProfileServices:
     """
-    Build a low-footprint packet-capture services block for constrained edge
-    units (e.g. ~490MB ARMv7). Enables capture in lightweight mode, pins the
-    interface(s), and collapses worker count. Pass to `profiles.create(services=...)`.
+    Build a low-footprint packet-capture config for constrained edge units (e.g.
+    ~490MB ARMv7): lightweight mode, pinned interface(s), a single worker, and DPI
+    (inspection) + payload off — inspection's TCP reassembly is the biggest memory
+    consumer, so it's disabled here. Pass to `profiles.create(services=...)`.
     """
-    return {
-        "packet": {
-            "enabled": True,
-            "lightweight": True,
-            "interface_patterns": interface_patterns or [],
-            "num_workers": 1,
-            "process_ids": False,
-        },
-    }
+    return ProfileServices(
+        packet=PacketServices(
+            enabled=True,
+            lightweight=True,
+            inspection=False,
+            payload=False,
+            interface_patterns=interface_patterns or [],
+            num_workers=1,
+            process_ids=False,
+        )
+    )
 
 
 class ProfilesAPI:
@@ -55,7 +59,7 @@ class ProfilesAPI:
         name: str,
         *,
         description: str | None = None,
-        services: dict[str, Any] | None = None,
+        services: ProfileServices | dict[str, Any] | None = None,
         tags: list[str] | None = None,
         update_channel: Literal["stable", "dev", "pinned"] = "stable",
         fleet_staging: bool = False,
@@ -66,8 +70,10 @@ class ProfilesAPI:
         Args:
             name: display name.
             description: optional notes.
-            services: partial services config (merged with server defaults).
-                      See lightweight_packet_services() for edge units.
+            services: capture config — a ProfileServices (typed, validated; the
+                      recommended path) or a raw dict (escape hatch). Only the
+                      fields you set are sent; the server fills the rest with its
+                      defaults. See lightweight_packet_services() for edge units.
             tags: optional tags applied to nodes using this profile.
             update_channel: "stable" | "dev" | "pinned".
             fleet_staging: if True, provision-token nodes start "staged" (requires
@@ -84,7 +90,9 @@ class ProfilesAPI:
         if description is not None:
             payload["description"] = description
         if services is not None:
-            payload["services"] = services
+            payload["services"] = (
+                services.to_payload() if isinstance(services, ProfileServices) else services
+            )
         if tags is not None:
             payload["tags"] = tags
 

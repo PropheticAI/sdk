@@ -84,13 +84,18 @@ from .nodes import (
 
 # Profiles submodule exports
 from .profiles import (
+    EnabledService,
+    HostLogServices,
+    NetflowServices,
+    PacketServices,
     Profile,
     ProfilesAPI,
+    ProfileServices,
     lightweight_packet_services,
 )
 from .query import Q
 
-__version__ = "0.3.1"
+__version__ = "0.4.0"
 
 __all__ = [
     # Client
@@ -139,6 +144,11 @@ __all__ = [
     "ProfilesAPI",
     "Profile",
     "lightweight_packet_services",
+    "ProfileServices",
+    "PacketServices",
+    "NetflowServices",
+    "HostLogServices",
+    "EnabledService",
     # Collector API
     "CollectorAPI",
     # Factory workflow

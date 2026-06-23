@@ -197,6 +197,43 @@ deployment.parent       # "parent-123"
 deployment.created_at   # "2026-02-04T16:00:00Z"
 ```
 
+## Profiles (capture config)
+
+A profile is a reusable capture-config template referenced by units. Build it
+with the typed `ProfileServices` — only the fields you set are sent; the server
+fills the rest with defaults, and a misspelled field raises immediately (rather
+than silently doing nothing).
+
+```python
+from prophet.sdk import ProfileServices, PacketServices
+
+prof = prophet.profiles.create(
+    name="TerraLynk fleet",
+    services=ProfileServices(
+        packet=PacketServices(enabled=True, lightweight=True, interface_patterns=["eth*"]),
+    ),
+)
+
+# Or the constrained-edge shortcut (lightweight, pinned iface, 1 worker, DPI off):
+from prophet.sdk.profiles import lightweight_packet_services
+prophet.profiles.create(name="Fleet", services=lightweight_packet_services(["eth*"]))
+```
+
+Available options (all optional):
+
+- **packet** — `enabled`, `interface_patterns` (globs, matched per-node), `inspection`
+  (DPI; TCP reassembly + TLS/DNS — memory-heavy), `payload`, `lightweight`, `ephemeral`,
+  `afpacket`, `gre`, `process_ids`, `num_workers`, `num_spoolers`, and buffer/spool sizing
+  (`packet_buffer_length`, `afpacket_block_size`, `afpacket_num_blocks`,
+  `packet_buffer_timeout_ms`, `max_spooled_files`, `max_spooled_file_size`, `ingest_stream_interval`).
+- **netflow** — `enabled`, `port`.
+- **suricata_logs** / **suricata_ids** — `enabled`.
+- **host_logs** — `enabled` (off by default), `excluded_sources` — a list of sources to
+  **exclude**; everything else for the node's OS is collected.
+
+A raw `dict` is also accepted as an escape hatch (`services={"netflow": {...}}`), but the
+typed form is recommended — it validates field names.
+
 ## Factory (provisioning workflow)
 
 `prophet.factory` is a workflow layer (not an API wrapper): one call provisions a
