@@ -197,6 +197,36 @@ deployment.parent       # "parent-123"
 deployment.created_at   # "2026-02-04T16:00:00Z"
 ```
 
+## Factory (provisioning workflow)
+
+`prophet.factory` is a workflow layer (not an API wrapper): one call provisions a
+unit, fetches its binary, and writes a ready-to-flash bundle. You supply domain
+facts; paths/perms/args/env are computed.
+
+```python
+inst = prophet.factory.build(
+    deployment_id="meshcomm-x1234y567",   # child deployment (end customer)
+    cpu_id="0x1122334455667788",          # board CPU ID -> deterministic machine_id
+    profile_id="<profile-uuid>",          # fleet capture profile
+    serial="SN-0042",
+    arch="arm7",
+    out_dir="./installers/SN-0042",
+)
+
+inst.access_key   # per-unit secret (shown once) -> store in your ops DB
+inst.machine_id   # deterministic from cpu_id -> ops DB join key
+inst.bundle_dir   # bin/prophet + prophet_collector.yaml + prophet-node.service
+                  # + install.sh + manifest.json  -> copy to the unit, run install.sh
+```
+
+Your flashing pipeline copies `bundle_dir` to the unit and runs `install.sh`
+(places files, enables the service). Then gate on enrollment:
+
+```python
+node = prophet.nodes.find_by_machine_id(inst.machine_id)
+ship_ok = node is not None and node.is_enrolled
+```
+
 ## Collector Binary
 
 Download the prophet-node binary (latest stable per platform/channel) — no GitHub

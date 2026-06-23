@@ -16,6 +16,7 @@ from .auth import TokenManager
 from .collector import CollectorAPI
 from .deployments import DeploymentsAPI
 from .exceptions import APIError, AuthenticationError, ConnectionError
+from .factory import FactoryAPI
 from .flows import FlowsAPI
 from .nodes import NodesAPI
 from .profiles import ProfilesAPI
@@ -56,6 +57,7 @@ class Prophet:
     - `prophet.nodes` - Provision and inspect nodes
     - `prophet.profiles` - Manage node capture-config profiles
     - `prophet.collector` - Download the prophet-node binary
+    - `prophet.factory` - End-to-end unit-provisioning workflows
 
     Example:
         from prophet.sdk import Prophet, Q, HoursAgo, Now
@@ -138,6 +140,7 @@ class Prophet:
         self._nodes = NodesAPI(self)
         self._profiles = ProfilesAPI(self)
         self._collector = CollectorAPI(self)
+        self._factory = FactoryAPI(self)
 
     @property
     def flows(self) -> FlowsAPI:
@@ -219,6 +222,22 @@ class Prophet:
             binary = prophet.collector.download(arch="arm7", extract=True, dest="./dist")
         """
         return self._collector
+
+    @property
+    def factory(self) -> FactoryAPI:
+        """
+        Access the Factory API — end-to-end workflows that compose the primitives.
+
+        Returns:
+            FactoryAPI instance
+
+        Example:
+            inst = prophet.factory.build(
+                deployment_id="child-customer-id", cpu_id="0x11..",
+                profile_id="<uuid>", serial="SN-0042", arch="arm7",
+            )
+        """
+        return self._factory
 
     @property
     def customer_id(self) -> str:

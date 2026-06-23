@@ -40,6 +40,7 @@ from .exceptions import (
     TokenExpiredError,
     ValidationError,
 )
+from .factory import FactoryAPI, Installer
 
 # Flow submodule exports
 from .flows import (
@@ -140,6 +141,9 @@ __all__ = [
     "lightweight_packet_services",
     # Collector API
     "CollectorAPI",
+    # Factory workflow
+    "FactoryAPI",
+    "Installer",
     # Exceptions
     "ProphetError",
     "ConfigurationError",
