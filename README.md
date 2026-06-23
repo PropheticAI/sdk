@@ -1,18 +1,21 @@
 # Prophet SDK
 
-Python SDK for Prophet's API.
+Python SDK for the Prophet API.
+
+- `prophet.flows` — query flow records (auto-paginating)
+- `prophet.deployments` — manage sub-deployments (MSP child tenants)
+- `prophet.nodes` — provision and inspect nodes
+- `prophet.profiles` — node capture-config templates
+- `prophet.collector` — download the prophet-node binary
+- `prophet.factory` — end-to-end unit-provisioning workflow
 
 ## Installation
 
 ```bash
-pip install prophet-sdk
+pip install "git+https://github.com/PropheticAI/sdk.git@v0.4.0"
 ```
 
-Or install from source:
-
-```bash
-pip install -e .
-```
+Public repo — no credentials needed to install. From a local clone: `pip install -e .`.
 
 ## Authentication
 
@@ -195,6 +198,25 @@ deployment.handle       # "acme_corp"
 deployment.type         # "child"
 deployment.parent       # "parent-123"
 deployment.created_at   # "2026-02-04T16:00:00Z"
+```
+
+## Nodes API
+
+Provision units and inspect nodes. (For the full build-a-unit workflow, see Factory below.)
+
+```python
+# Provision a unit -> per-unit access_key + deterministic machine_id
+unit = prophet.nodes.provision(
+    deployment="<child-customer-id>", cpu_id="0x1122334455", profile_id="<profile-uuid>",
+)
+unit.access_key   # store in your ops DB (shown once)
+unit.machine_id   # deterministic from cpu_id -> join key
+
+# Inspect
+nodes = prophet.nodes.list()              # list[Node] (incl. children for a parent MSP)
+node = prophet.nodes.get("<node_id>")     # or None
+node = prophet.nodes.find_by_machine_id(unit.machine_id)
+node.is_enrolled                          # True = active + control-plane connected
 ```
 
 ## Profiles (capture config)
