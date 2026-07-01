@@ -3,6 +3,7 @@
 Python SDK for the Prophet API.
 
 - `prophet.flows` — query flow records (auto-paginating)
+- `prophet.investigations` — read Apollo investigations (verdict, findings, provenance)
 - `prophet.deployments` — manage sub-deployments (MSP child tenants)
 - `prophet.nodes` — provision and inspect nodes
 - `prophet.profiles` — node capture-config templates
@@ -150,6 +151,52 @@ flow.stats.rate.bps.total      # bits per second
 flow.stats.volume.bytes.total  # total bytes
 flow.meta.tags                 # ["tag1", "tag2"]
 ```
+
+## Investigations API
+
+Read Apollo investigations for the authenticated tenant — Apollo's analysis of a
+flagged event: verdict, key findings, provenance lineage, and recommended actions.
+Read-only, scoped to the token's tenant.
+
+### List investigations
+
+```python
+# Returns an InvestigationPage — iterable, with .total / .has_more
+page = prophet.investigations.list(disposition="escalate", sort="recent", limit=25)
+print(page.total)
+for inv in page:
+    print(inv.headline, inv.confidence)
+
+# Filters: disposition ("benign" | "malicious" | "escalate"), min_confidence,
+# since / until (ISO string or datetime), sort ("severity" | "recent"), limit, offset.
+```
+
+### Stream every match (auto-pagination)
+
+```python
+for inv in prophet.investigations.iter(disposition="malicious"):
+    print(inv.id, inv.confidence)
+```
+
+### Get one full investigation
+
+```python
+# None if it does not exist, is not yours, or has not finished yet
+inv = prophet.investigations.get("inv_43d67a...")
+if inv and inv.needs_escalation:
+    print(inv.at_a_glance.therefore)
+    for f in inv.key_findings:
+        print(f.role, f.headline, "— rules out:", f.rules_out)
+    if inv.has_provenance:
+        for leg in inv.provenance.legs:
+            print(leg.stage, leg.headline, leg.confidence)
+```
+
+### Convenience checks
+
+`inv.is_malicious`, `inv.is_benign`, `inv.needs_escalation`, `inv.is_running`,
+`inv.is_complete`, and `inv.has_provenance` — available on both list items and the
+full investigation.
 
 ## Deployments API
 

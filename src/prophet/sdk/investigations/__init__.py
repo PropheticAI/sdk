@@ -1,0 +1,47 @@
+"""Investigations API submodule — read-only access to Apollo investigations."""
+
+from .api import InvestigationsAPI
+from .models import (
+    AtAGlance,
+    AttackRef,
+    DecisionSupport,
+    HostValue,
+    Investigation,
+    InvestigationListItem,
+    InvestigationMeta,
+    InvestigationPage,
+    KeyFinding,
+    OpenQuestion,
+    Provenance,
+    ProvenanceActor,
+    ProvenanceLeg,
+    RecommendedAction,
+    TimelineEvent,
+    TrafficLink,
+    Trigger,
+    TriggerSignal,
+    Verdict,
+)
+
+__all__ = [
+    "InvestigationsAPI",
+    "Investigation",
+    "InvestigationListItem",
+    "InvestigationPage",
+    "Verdict",
+    "AtAGlance",
+    "Trigger",
+    "TriggerSignal",
+    "KeyFinding",
+    "TimelineEvent",
+    "TrafficLink",
+    "Provenance",
+    "ProvenanceLeg",
+    "ProvenanceActor",
+    "AttackRef",
+    "HostValue",
+    "OpenQuestion",
+    "RecommendedAction",
+    "DecisionSupport",
+    "InvestigationMeta",
+]

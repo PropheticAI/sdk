@@ -16,8 +16,10 @@ from .auth import TokenManager
 from .collector import CollectorAPI
 from .deployments import DeploymentsAPI
 from .exceptions import APIError, AuthenticationError, ConnectionError
+from .explore import ExploreAPI
 from .factory import FactoryAPI
 from .flows import FlowsAPI
+from .investigations import InvestigationsAPI
 from .nodes import NodesAPI
 from .profiles import ProfilesAPI
 
@@ -53,6 +55,8 @@ class Prophet:
 
     Provides access to:
     - `prophet.flows` - Query flow records
+    - `prophet.investigations` - Read Apollo investigations
+    - `prophet.explore` - External-organization communication shape (egress)
     - `prophet.deployments` - Manage sub-deployments
     - `prophet.nodes` - Provision and inspect nodes
     - `prophet.profiles` - Manage node capture-config profiles
@@ -136,6 +140,8 @@ class Prophet:
 
         # Initialize API namespaces
         self._flows = FlowsAPI(self)
+        self._investigations = InvestigationsAPI(self)
+        self._explore = ExploreAPI(self)
         self._deployments = DeploymentsAPI(self)
         self._nodes = NodesAPI(self)
         self._profiles = ProfilesAPI(self)
@@ -160,6 +166,26 @@ class Prophet:
                 print(flow.src.ip)
         """
         return self._flows
+
+    @property
+    def investigations(self) -> InvestigationsAPI:
+        """
+        Access the Investigations API for reading Apollo investigations.
+
+        Returns:
+            InvestigationsAPI instance
+
+        Example:
+            # List the newest escalations
+            for inv in prophet.investigations.list(disposition="escalate", sort="recent"):
+                print(inv.headline)
+
+            # Fetch one full investigation
+            full = prophet.investigations.get("inv_43d67a...")
+            if full and full.needs_escalation:
+                print(full.at_a_glance.therefore)
+        """
+        return self._investigations
 
     @property
     def deployments(self) -> DeploymentsAPI:
@@ -238,6 +264,21 @@ class Prophet:
             )
         """
         return self._factory
+
+    @property
+    def explore(self) -> ExploreAPI:
+        """
+        Access the Explore API — descriptive external-traffic characterization.
+
+        Returns:
+            ExploreAPI instance
+
+        Example:
+            orgs = prophet.explore.egress.organizations("acme_msp", start=HoursAgo(24))
+            for o in orgs.organizations:
+                print(o.name, o.upload, o.download)
+        """
+        return self._explore
 
     @property
     def customer_id(self) -> str:
