@@ -115,7 +115,7 @@ class EgressAPI:
         return Temporal.model_validate(self._dimension(instances, org, "temporal", start, end, src_ip))
 
     def cadence(self, instances, org, *, start=None, end=None, src_ip=None) -> Cadence:
-        """RHYTHM: inter-arrival regularity distribution + beacon subset."""
+        """RHYTHM: the session-gap CDF (stepped = machine) + beacon subset."""
         return Cadence.model_validate(self._dimension(instances, org, "cadence", start, end, src_ip))
 
     def transfer(self, instances, org, *, start=None, end=None, src_ip=None) -> Transfer:

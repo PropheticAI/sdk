@@ -5,7 +5,7 @@ from __future__ import annotations
 from collections.abc import Iterator
 from typing import TYPE_CHECKING, Any
 
-from ..exceptions import APIError, AuthenticationError
+from ..exceptions import APIError, AuthenticationError, parse_error
 from .models import Flow, FlowPage
 
 if TYPE_CHECKING:
@@ -165,22 +165,33 @@ class FlowIterator:
         # Make request
         response = self._client._request("POST", "/search/records/1.0", json=payload)
 
-        # Handle errors
-        if response.status_code == 401:
-            data = response.json()
-            raise AuthenticationError(
-                message=data.get("error", "Authentication failed"),
-                code=data.get("code"),
-            )
-
-        if response.status_code == 400:
-            data = response.json()
-            error = data.get("error", {})
+        # Handle errors. The search-api wraps errors in a nested envelope —
+        # {"error": {"code", "message", "type", "details"}, "timestamp": ...} —
+        # which parse_error prefers, falling back to the older flat
+        # {"error": "...", "code": "..."} shape.
+        status = response.status_code
+        if status in (400, 401, 403):
+            try:
+                body = response.json()
+            except Exception:  # non-JSON error body — parse_error falls back
+                body = None
+            if status == 401:
+                message, kind, details = parse_error(body, "Authentication failed")
+                raise AuthenticationError(message=message, code=kind, details=details)
+            if status == 403:
+                message, kind, details = parse_error(body, "Authorization failed")
+                raise APIError(
+                    message=message,
+                    status_code=403,
+                    error_type=kind or "authorization_error",
+                    details=details,
+                )
+            message, kind, details = parse_error(body, "Validation failed")
             raise APIError(
-                message=error.get("message", "Validation failed"),
+                message=message,
                 status_code=400,
-                error_type="validation_error",
-                details=error.get("details"),
+                error_type=kind or "validation_error",
+                details=details,
             )
 
         if response.status_code != 200:

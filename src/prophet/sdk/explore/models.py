@@ -76,11 +76,16 @@ class Temporal(_EgressResult):
 
 
 # --- cadence ----------------------------------------------------------------
-class HistogramBucket(_Model):
-    min: float | None = None
-    max: float | None = None
-    key: float | None = None
-    doc_count: int = 0
+class CdfPoint(_Model):
+    """A (gap, mass) point on the session-gap distribution.
+
+    In ``Cadence.cdf``, ``fraction`` of sessions have a characteristic gap of
+    at most ``gap_secs`` (cumulative). In ``Cadence.dominant_intervals`` the
+    same shape names a beat: ``fraction`` is that interval's share of mass.
+    """
+
+    gap_secs: float = 0
+    fraction: float = 0
 
 
 class Beacon(_Model):
@@ -90,8 +95,12 @@ class Beacon(_Model):
 
 
 class Cadence(_EgressResult):
-    distribution: list[HistogramBucket] = []
-    stats: dict[str, Any] = {}
+    cdf: list[CdfPoint] = []
+    dominant_intervals: list[CdfPoint] = []  # top beats (largest-mass first)
+    steppedness: float | None = None         # mass of the largest beat (~1.0 = one scheduler)
+    median_gap_secs: float | None = None     # p50 session gap
+    stats: dict[str, Any] = {}               # keyed by dotted field path, e.g.
+    #   "stats.timing.inter_arrival_secs.regularity" / ".mean_gap" / ".burstiness"
     beacon: Beacon | None = None
 
 
